@@ -29,6 +29,20 @@
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmc</groupId>
+      <artifactId>common</artifactId>
+      <version>7.1.0-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/org.openjdk.jmc.common_7.1.0.qualifier.jar</systemPath>
+    </dependency>
+    <dependency>
+      <groupId>org.openjdk.jmc</groupId>
+      <artifactId>flightrecorder</artifactId>
+      <version>7.1.0-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>${project.basedir}/lib/org.openjdk.jmc.flightrecorder_7.1.0.qualifier.jar</systemPath>
+    </dependency>
   </dependencies>
 
   <build>

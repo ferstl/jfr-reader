@@ -19,12 +19,15 @@ public class Main {
     // Use the PID of a running JVM
     String pid = args[0];
     FlightRecorderMXBean flightRecorder = getFlightRecorder(pid);
-    long streamId = flightRecorder.openStream(1, Map.of());
 
+    long clonedRecording = flightRecorder.cloneRecording(1, true);
+    long streamId = flightRecorder.openStream(clonedRecording, Map.of());
 
-    //    for (byte[] bytes = flightRecorder.readStream(streamId); bytes != null; bytes = flightRecorder.readStream(streamId)) {
-    //      System.out.println("Read " + bytes.length + " bytes");
-    //    }
+    for (byte[] bytes = flightRecorder.readStream(streamId); bytes != null; bytes = flightRecorder.readStream(streamId)) {
+      System.out.println("Read " + bytes.length + " bytes");
+    }
+
+    flightRecorder.closeRecording(clonedRecording);
 
   }
 

@@ -2,10 +2,14 @@ package com.github.ferstl.jfrreader;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.management.JMX;
 import javax.management.MBeanServerConnection;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
+import javax.management.openmbean.CompositeData;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
@@ -24,10 +28,12 @@ public class FlightRecorderConnection implements AutoCloseable {
   }
 
   private final JMXConnector jmxConnector;
+  private final MBeanServerConnection mBeanServerConnection;
   private final FlightRecorderMXBean flightRecorder;
 
-  private FlightRecorderConnection(JMXConnector jmxConnector, FlightRecorderMXBean flightRecorder) {
+  private FlightRecorderConnection(JMXConnector jmxConnector, MBeanServerConnection mBeanServerConnection, FlightRecorderMXBean flightRecorder) {
     this.jmxConnector = jmxConnector;
+    this.mBeanServerConnection = mBeanServerConnection;
     this.flightRecorder = flightRecorder;
   }
 
@@ -38,7 +44,7 @@ public class FlightRecorderConnection implements AutoCloseable {
 
       FlightRecorderMXBean flightRecorder = JMX.newMXBeanProxy(mBeanServerConnection, JFR_OBJECT_NAME, FlightRecorderMXBean.class);
 
-      return new FlightRecorderConnection(jmxConnector, flightRecorder);
+      return new FlightRecorderConnection(jmxConnector, mBeanServerConnection, flightRecorder);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
@@ -48,8 +54,23 @@ public class FlightRecorderConnection implements AutoCloseable {
     return this.flightRecorder;
   }
 
+  // Workaround for https://bugs.openjdk.java.net/browse/JDK-8219904
+  public List<RecordingInfo> getRecordings() {
+    CompositeData[] recordings;
+    try {
+      recordings = (CompositeData[]) this.mBeanServerConnection.getAttribute(JFR_OBJECT_NAME, "Recordings");
+    } catch (Exception e) {
+      throw new IllegalStateException("Unable to read recordings", e);
+    }
+
+    return Arrays.stream(recordings)
+        .map(RecordingInfo::new)
+        .collect(Collectors.toList());
+  }
+
   @Override
   public void close() throws Exception {
     this.jmxConnector.close();
   }
+
 }

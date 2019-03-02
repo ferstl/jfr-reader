@@ -24,6 +24,11 @@ public class Main {
 
     try (FlightRecorderConnection connection = FlightRecorderConnection.fromJmxServiceUrl(jmxServiceUrl)) {
       FlightRecorderMXBean flightRecorder = connection.getFlightRecorder();
+      for (RecordingInfo recording : connection.getRecordings()) {
+        System.out.println(recording);
+      }
+
+
       int recordingId = 1;
       long clonedRecording = cloneRecording(flightRecorder, recordingId);
 

@@ -2,6 +2,7 @@ package com.github.ferstl.jfrreader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.Map;
 import org.openjdk.jmc.common.item.IItemCollection;
@@ -12,6 +13,8 @@ import com.sun.tools.attach.VirtualMachine;
 import jdk.management.jfr.FlightRecorderMXBean;
 
 public class Main {
+
+  private static final String ONE_MB = "1048576";
 
   public static void main(String[] args) throws Exception {
     // Use the PID of a running JVM
@@ -26,9 +29,8 @@ public class Main {
       Instant nextStartTime = Instant.ofEpochMilli(0);
       for (int i = 0; i < 1000; i++) {
         System.out.println("Start iteration " + i);
-        long cloneId = cloneRecording(flightRecorder, originalRecording);
-        RecordingInfo clonedRecording = connection.getRecordingById(cloneId);
-        byte[] data = readRecording(flightRecorder, cloneId, nextStartTime);
+        RecordingInfo clonedRecording = cloneRecording(connection, originalRecording);
+        byte[] data = readRecording(flightRecorder, clonedRecording, nextStartTime);
         parseRecording(data);
         nextStartTime = clonedRecording.getStopTime();
       }
@@ -47,32 +49,29 @@ public class Main {
     return jmxServiceUrl;
   }
 
-  private static long cloneRecording(FlightRecorderMXBean flightRecorder, RecordingInfo recording) {
-    long clonedRecording = flightRecorder.cloneRecording(recording.getId(), true);
-    flightRecorder.setRecordingOptions(clonedRecording, Map.of("name", "jfr stream clone of " + recording.getName()));
+  private static RecordingInfo cloneRecording(FlightRecorderConnection connection, RecordingInfo originalRecording) {
+    FlightRecorderMXBean flightRecorder = connection.getFlightRecorder();
+    long cloneId = flightRecorder.cloneRecording(originalRecording.getId(), true);
+    flightRecorder.setRecordingOptions(cloneId, Map.of("name", "jfr stream clone of " + originalRecording.getName()));
 
-    return clonedRecording;
+    return connection.getRecordingById(cloneId);
   }
 
-  private static byte[] readRecording(FlightRecorderMXBean flightRecorder, long cloneId, Instant startTime) throws IOException {
-    long streamId = flightRecorder.openStream(cloneId, Map.of("startTime", startTime.toString()));
-    byte[] data = new byte[0];
+  private static byte[] readRecording(FlightRecorderMXBean flightRecorder, RecordingInfo recording, Instant startTime) throws IOException {
+    long recordingId = recording.getId();
+    long streamId = flightRecorder.openStream(recordingId, Map.of("startTime", startTime.toString(), "blockSize", ONE_MB));
+    ByteBuffer buffer = ByteBuffer.allocate((int) recording.getSize());
     for (byte[] bytes = flightRecorder.readStream(streamId); bytes != null; bytes = flightRecorder.readStream(streamId)) {
-      data = concat(data, bytes);
+      buffer.put(bytes);
     }
 
-    flightRecorder.closeRecording(cloneId);
+    flightRecorder.closeRecording(recordingId);
+    buffer.flip();
 
-    System.out.println("Read " + data.length + " Bytes");
-    return data;
-  }
-
-  private static byte[] concat(byte[] a, byte[] b) {
-    byte[] concatenated = new byte[a.length + b.length];
-    System.arraycopy(a, 0, concatenated, 0, a.length);
-    System.arraycopy(b, 0, concatenated, a.length, b.length);
-
-    return concatenated;
+    System.out.println("Read " + buffer.limit() + " bytes");
+    byte[] result = new byte[buffer.limit()];
+    System.arraycopy(buffer.array(), 0, result, 0, result.length);
+    return result;
   }
 
 }

@@ -1,6 +1,7 @@
 package com.github.ferstl.jfrreader;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.Map;
 import org.openjdk.jmc.common.IDisplayable;
 import org.openjdk.jmc.common.item.Aggregators;
@@ -10,6 +11,7 @@ import org.openjdk.jmc.common.unit.IQuantity;
 import org.openjdk.jmc.flightrecorder.JfrAttributes;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
+import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 import jdk.management.jfr.FlightRecorderMXBean;
 
@@ -18,19 +20,17 @@ public class Main {
   public static void main(String[] args) throws Exception {
     // Use the PID of a running JVM
     String pid = args[0];
-    VirtualMachine vm = VirtualMachine.attach(pid);
-    String jmxServiceUrl = vm.startLocalManagementAgent();
-    vm.detach();
+    String recording = args[1];
+    String managementUrl = getLocalManagementUrl(pid);
 
-    try (FlightRecorderConnection connection = FlightRecorderConnection.fromJmxServiceUrl(jmxServiceUrl)) {
+    try (FlightRecorderConnection connection = FlightRecorderConnection.fromJmxServiceUrl(managementUrl)) {
       FlightRecorderMXBean flightRecorder = connection.getFlightRecorder();
-      for (RecordingInfo recording : connection.getRecordings()) {
-        System.out.println(recording);
-      }
+      RecordingInfo recordingInfo = connection.getRecordings().stream()
+          .filter(info -> recording.equals(info.getName()))
+          .findFirst()
+          .orElseThrow(() -> new IllegalArgumentException("Recording '" + recording + "' not found in JVM '" + pid + "'"));
 
-
-      int recordingId = 1;
-      long clonedRecording = cloneRecording(flightRecorder, recordingId);
+      long clonedRecording = cloneRecording(flightRecorder, recordingInfo);
 
       long streamId = flightRecorder.openStream(clonedRecording, Map.of());
       byte[] data = new byte[0];
@@ -49,13 +49,17 @@ public class Main {
     }
   }
 
-  private static long cloneRecording(FlightRecorderMXBean flightRecorder, int recordingId) {
-    long clonedRecording = flightRecorder.cloneRecording(recordingId, true);
+  private static String getLocalManagementUrl(String pid) throws AttachNotSupportedException, IOException {
+    VirtualMachine vm = VirtualMachine.attach(pid);
+    String jmxServiceUrl = vm.startLocalManagementAgent();
+    vm.detach();
 
-    Map<String, String> recordingOptions = flightRecorder.getRecordingOptions(clonedRecording);
-    String name = recordingOptions.getOrDefault("name", "unnamed recording");
-    name = name.replace("Clone of ", "");
-    flightRecorder.setRecordingOptions(clonedRecording, Map.of("name", "jfr stream clone of " + name));
+    return jmxServiceUrl;
+  }
+
+  private static long cloneRecording(FlightRecorderMXBean flightRecorder, RecordingInfo recording) {
+    long clonedRecording = flightRecorder.cloneRecording(recording.getId(), true);
+    flightRecorder.setRecordingOptions(clonedRecording, Map.of("name", "jfr stream clone of " + recording.getName()));
 
     return clonedRecording;
   }

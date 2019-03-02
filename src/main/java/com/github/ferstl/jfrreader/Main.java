@@ -2,15 +2,11 @@ package com.github.ferstl.jfrreader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Map;
-import org.openjdk.jmc.common.IDisplayable;
-import org.openjdk.jmc.common.item.Aggregators;
 import org.openjdk.jmc.common.item.IItemCollection;
-import org.openjdk.jmc.common.item.ItemFilters;
-import org.openjdk.jmc.common.unit.IQuantity;
-import org.openjdk.jmc.flightrecorder.JfrAttributes;
+import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
-import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
 import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 import jdk.management.jfr.FlightRecorderMXBean;
@@ -20,33 +16,27 @@ public class Main {
   public static void main(String[] args) throws Exception {
     // Use the PID of a running JVM
     String pid = args[0];
-    String recording = args[1];
+    String recordingName = args[1];
     String managementUrl = getLocalManagementUrl(pid);
 
     try (FlightRecorderConnection connection = FlightRecorderConnection.fromJmxServiceUrl(managementUrl)) {
       FlightRecorderMXBean flightRecorder = connection.getFlightRecorder();
-      RecordingInfo recordingInfo = connection.getRecordings().stream()
-          .filter(info -> recording.equals(info.getName()))
-          .findFirst()
-          .orElseThrow(() -> new IllegalArgumentException("Recording '" + recording + "' not found in JVM '" + pid + "'"));
+      RecordingInfo originalRecording = connection.getRecordingByName(recordingName);
 
-      long clonedRecording = cloneRecording(flightRecorder, recordingInfo);
-
-      long streamId = flightRecorder.openStream(clonedRecording, Map.of());
-      byte[] data = new byte[0];
-      for (byte[] bytes = flightRecorder.readStream(streamId); bytes != null; bytes = flightRecorder.readStream(streamId)) {
-        data = concat(data, bytes);
+      Instant nextStartTime = Instant.ofEpochMilli(0);
+      for (int i = 0; i < 1000; i++) {
+        System.out.println("Start iteration " + i);
+        long cloneId = cloneRecording(flightRecorder, originalRecording);
+        RecordingInfo clonedRecording = connection.getRecordingById(cloneId);
+        byte[] data = readRecording(flightRecorder, cloneId, nextStartTime);
+        parseRecording(data);
+        nextStartTime = clonedRecording.getStopTime();
       }
-
-      flightRecorder.closeRecording(clonedRecording);
-
-      IItemCollection events = JfrLoaderToolkit.loadEvents(new ByteArrayInputStream(data));
-      IQuantity aggregate = events.apply(ItemFilters.type(JdkTypeIDs.MONITOR_ENTER))
-          .getAggregate(Aggregators.stddev(JfrAttributes.DURATION));
-
-      System.out.println("The standard deviation for the Java monitor enter events was "
-          + aggregate.displayUsing(IDisplayable.AUTO));
     }
+  }
+
+  private static void parseRecording(byte[] data) throws IOException, CouldNotLoadRecordingException {
+    IItemCollection events = JfrLoaderToolkit.loadEvents(new ByteArrayInputStream(data));
   }
 
   private static String getLocalManagementUrl(String pid) throws AttachNotSupportedException, IOException {
@@ -62,6 +52,19 @@ public class Main {
     flightRecorder.setRecordingOptions(clonedRecording, Map.of("name", "jfr stream clone of " + recording.getName()));
 
     return clonedRecording;
+  }
+
+  private static byte[] readRecording(FlightRecorderMXBean flightRecorder, long cloneId, Instant startTime) throws IOException {
+    long streamId = flightRecorder.openStream(cloneId, Map.of("startTime", startTime.toString()));
+    byte[] data = new byte[0];
+    for (byte[] bytes = flightRecorder.readStream(streamId); bytes != null; bytes = flightRecorder.readStream(streamId)) {
+      data = concat(data, bytes);
+    }
+
+    flightRecorder.closeRecording(cloneId);
+
+    System.out.println("Read " + data.length + " Bytes");
+    return data;
   }
 
   private static byte[] concat(byte[] a, byte[] b) {

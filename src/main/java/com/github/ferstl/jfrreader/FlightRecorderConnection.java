@@ -68,6 +68,20 @@ public class FlightRecorderConnection implements AutoCloseable {
         .collect(Collectors.toList());
   }
 
+  public RecordingInfo getRecordingByName(String name) {
+    return getRecordings().stream()
+        .filter(recordingInfo -> name.equals(recordingInfo.getName()))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("Recording '" + name + "' not found."));
+  }
+
+  public RecordingInfo getRecordingById(long id) {
+    return getRecordings().stream()
+        .filter(recordingInfo -> recordingInfo.getId() == id)
+        .findAny()
+        .orElseThrow(() -> new IllegalStateException("Recording '" + id + "' not found."));
+  }
+
   @Override
   public void close() throws Exception {
     this.jmxConnector.close();

@@ -20,7 +20,7 @@ public class ItemAttributeExtractor {
     return getEpochNanos(item, JfrAttributes.START_TIME);
   }
 
-  public static long getEpochNanos(IItem item, IAttribute<IQuantity> attribute) {
+  static long getEpochNanos(IItem item, IAttribute<IQuantity> attribute) {
     return attribute
         .getAccessor((IType<IItem>) item.getType())
         .getMember(item)

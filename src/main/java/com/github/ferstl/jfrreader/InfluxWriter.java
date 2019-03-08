@@ -36,7 +36,23 @@ public class InfluxWriter implements AutoCloseable {
         .addField("jvm_args", requireNonNullElse(jvmArgs, ""))
         .addField("java_args", requireNonNullElse(javaArgs, ""))
         .tag("application", "jfr-test")
-        .tag("event_type", "gc_pause")
+        .tag("event_type", "jvm_info")
+        .build()
+    );
+  }
+
+  public void writeGcConfig(long eventStartTimeNs, String youngCollector, String oldCollector, long nrOfParallelGcThreads, long nrOfConcurrentGcThreads, long gcTimeRatio, Boolean explicitGcEnabled, Boolean explicitGcConcurrent) {
+    this.influxDb.write(Point.measurement("gc_config")
+        .time(eventStartTimeNs, NANOSECONDS)
+        .addField("young_collector", youngCollector)
+        .addField("old_collector", oldCollector)
+        .addField("nr_of_parallel_threads", nrOfParallelGcThreads)
+        .addField("nr_of_concurrent_threads", nrOfConcurrentGcThreads)
+        .addField("gc_time_ratio", gcTimeRatio)
+        .addField("explicit_gc_enabled", explicitGcEnabled != null ? explicitGcEnabled.toString() : Boolean.FALSE.toString())
+        .addField("explicit_gc_concurrent", explicitGcConcurrent != null ? explicitGcConcurrent.toString() : Boolean.FALSE.toString())
+        .tag("application", "jfr-test")
+        .tag("event_type", "gc_config")
         .build()
     );
   }

@@ -18,7 +18,7 @@ public class EventReader {
   public static void main(String[] args) throws Exception {
     Path recording = Paths.get(args[0]);
 
-    IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile()).apply(JdkFilters.VM_INFO);
+    IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile()).apply(JdkFilters.GC_CONFIG);
     System.out.println("Flight recorder events read.");
 
     try (InfluxWriter influxWriter = new InfluxWriter()) {
@@ -31,6 +31,10 @@ public class EventReader {
         } else if (JdkTypeIDs.VM_INFO.equals(type.getIdentifier())) {
           for (IItem item : eventTypeEntry) {
             recordVmInfo(item, type, influxWriter);
+          }
+        } else if (JdkTypeIDs.GC_CONF.equals(type.getIdentifier())) {
+          for (IItem item : eventTypeEntry) {
+            recordGcConfig(item, type, influxWriter);
           }
         }
 
@@ -57,5 +61,18 @@ public class EventReader {
     long durationUs = JfrAttributes.DURATION.getAccessor(type).getMember(item).clampedLongValueIn(UnitLookup.MICROSECOND);
 
     influxWriter.writeGcPause(startTimeNano, gcId, gcName, durationUs);
+  }
+
+  private static void recordGcConfig(IItem item, IType<IItem> type, InfluxWriter influxWriter) {
+    long eventStartTimeNs = JfrAttributes.START_TIME.getAccessor(type).getMember(item).clampedLongValueIn(UnitLookup.EPOCH_NS);
+    String youngCollector = JdkAttributes.YOUNG_COLLECTOR.getAccessor(type).getMember(item);
+    String oldCollector = JdkAttributes.OLD_COLLECTOR.getAccessor(type).getMember(item);
+    long nrOfParallelGcThreads = JdkAttributes.PARALLEL_GC_THREADS.getAccessor(type).getMember(item).longValue();
+    long nrOfConcurrentGcThreads = JdkAttributes.CONCURRENT_GC_THREADS.getAccessor(type).getMember(item).longValue();
+    Boolean explicitGcEnabled = JdkAttributes.EXPLICIT_GC_DISABLED.getAccessor(type).getMember(item);
+    Boolean explicitGcConcurrent = JdkAttributes.EXPLICIT_GC_CONCURRENT.getAccessor(type).getMember(item);
+    long gcTimeRatio = JdkAttributes.GC_TIME_RATIO.getAccessor(type).getMember(item).longValue();
+
+    influxWriter.writeGcConfig(eventStartTimeNs, youngCollector, oldCollector, nrOfParallelGcThreads, nrOfConcurrentGcThreads, gcTimeRatio, explicitGcEnabled, explicitGcConcurrent);
   }
 }

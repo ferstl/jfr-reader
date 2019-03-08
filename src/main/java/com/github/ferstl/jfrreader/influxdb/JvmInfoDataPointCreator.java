@@ -18,7 +18,7 @@ public class JvmInfoDataPointCreator implements EventRecorder {
   }
 
   @Override
-  public void recordEvent(long startTimeEpochNs, IItem item) {
+  public void recordEvent(long startTimeEpochNs, IItem item, String applicationName) {
     this.influxDB.write(Point.measurement("jvm_info")
         .time(startTimeEpochNs, NANOSECONDS)
         .addField("jvm_name", this.eventExtractor.getJvmName(item))
@@ -26,7 +26,7 @@ public class JvmInfoDataPointCreator implements EventRecorder {
         .addField("jvm_start_time_ms", this.eventExtractor.getJvmStartTimeMs(item))
         .addField("jvm_args", this.eventExtractor.getJvmArgs(item))
         .addField("java_args", this.eventExtractor.getJavaArgs(item))
-        .tag("application", "jfr-test")
+        .tag("application", applicationName)
         .build()
     );
   }

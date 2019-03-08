@@ -18,13 +18,13 @@ public class GcPauseDataPointCreator implements EventRecorder {
   }
 
   @Override
-  public void recordEvent(long startTimeEpochNs, IItem item) {
+  public void recordEvent(long startTimeEpochNs, IItem item, String applicationName) {
     this.influxDB.write(Point.measurement("gc")
         .time(startTimeEpochNs, NANOSECONDS)
         .addField("gc_name", this.eventExtractor.getGcName(item))
         .addField("gc_id", this.eventExtractor.getGcId(item))
         .addField("pause_time_us", this.eventExtractor.getGcDurationUs(item))
-        .tag("application", "jfr-test")
+        .tag("application", applicationName)
         .build()
     );
   }

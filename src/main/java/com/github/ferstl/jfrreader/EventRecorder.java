@@ -4,5 +4,5 @@ import org.openjdk.jmc.common.item.IItem;
 
 public interface EventRecorder {
 
-  void recordEvent(long startTimeEpochNs, IItem item);
+  void recordEvent(long startTimeEpochNs, IItem item, String applicationName);
 }

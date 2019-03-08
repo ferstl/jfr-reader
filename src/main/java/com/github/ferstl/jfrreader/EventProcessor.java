@@ -9,9 +9,11 @@ import com.github.ferstl.jfrreader.extractor.ItemAttributeExtractor;
 
 public class EventProcessor {
 
+  private final String applicationName;
   private final EventRecorderRegistry eventRecorderRegistry;
 
-  public EventProcessor(EventRecorderRegistry eventRecorderRegistry) {
+  public EventProcessor(String applicationName, EventRecorderRegistry eventRecorderRegistry) {
+    this.applicationName = applicationName;
     this.eventRecorderRegistry = eventRecorderRegistry;
   }
 
@@ -23,7 +25,7 @@ public class EventProcessor {
         for (IItem item : eventTypeEntry) {
           EventRecorder recorder = recorderOptional.get();
           long startTime = ItemAttributeExtractor.getEventStartTimeNs(item);
-          recorder.recordEvent(startTime, item);
+          recorder.recordEvent(startTime, item, this.applicationName);
         }
       }
     }

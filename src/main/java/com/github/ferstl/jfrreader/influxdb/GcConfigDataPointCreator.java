@@ -18,7 +18,7 @@ public class GcConfigDataPointCreator implements EventRecorder {
   }
 
   @Override
-  public void recordEvent(long startTimeEpochNs, IItem item) {
+  public void recordEvent(long startTimeEpochNs, IItem item, String applicationName) {
     Boolean explicitGcEnabled = this.eventExtractor.getExplicitGcEnabled(item);
     Boolean explicitGcConcurrent = this.eventExtractor.getExplicitGcConcurrent(item);
 
@@ -31,7 +31,7 @@ public class GcConfigDataPointCreator implements EventRecorder {
         .addField("gc_time_ratio", this.eventExtractor.getGcTimeRatio(item))
         .addField("explicit_gc_enabled", explicitGcEnabled != null ? explicitGcEnabled.toString() : "")
         .addField("explicit_gc_concurrent", explicitGcConcurrent != null ? explicitGcConcurrent.toString() : "")
-        .tag("application", "jfr-test")
+        .tag("application", applicationName)
         .build()
     );
   }

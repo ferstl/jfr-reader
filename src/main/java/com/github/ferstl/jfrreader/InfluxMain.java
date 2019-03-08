@@ -10,9 +10,11 @@ import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
 import com.github.ferstl.jfrreader.extractor.GcConfigEventExtractor;
 import com.github.ferstl.jfrreader.extractor.GcPauseEventExtractor;
+import com.github.ferstl.jfrreader.extractor.HeapSummaryEventExtractor;
 import com.github.ferstl.jfrreader.extractor.JvmInfoEventExtractor;
 import com.github.ferstl.jfrreader.influxdb.GcConfigDataPointCreator;
 import com.github.ferstl.jfrreader.influxdb.GcPauseDataPointCreator;
+import com.github.ferstl.jfrreader.influxdb.HeapSummaryDataPointCreator;
 import com.github.ferstl.jfrreader.influxdb.JvmInfoDataPointCreator;
 
 public class InfluxMain {
@@ -39,7 +41,8 @@ public class InfluxMain {
         Map.of(
             JdkTypeIDs.GC_PAUSE, new GcPauseDataPointCreator(influxDB, new GcPauseEventExtractor()),
             JdkTypeIDs.GC_CONF, new GcConfigDataPointCreator(influxDB, new GcConfigEventExtractor()),
-            JdkTypeIDs.VM_INFO, new JvmInfoDataPointCreator(influxDB, new JvmInfoEventExtractor())
+            JdkTypeIDs.VM_INFO, new JvmInfoDataPointCreator(influxDB, new JvmInfoEventExtractor()),
+            JdkTypeIDs.HEAP_SUMMARY, new HeapSummaryDataPointCreator(influxDB, new HeapSummaryEventExtractor())
         )
     );
   }

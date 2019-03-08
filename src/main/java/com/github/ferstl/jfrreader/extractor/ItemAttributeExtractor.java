@@ -58,4 +58,11 @@ public class ItemAttributeExtractor {
         .getAccessor((IType<IItem>) item.getType())
         .getMember(item);
   }
+
+  static long getBytes(IItem item, IAttribute<IQuantity> attribute) {
+    return attribute
+        .getAccessor((IType<IItem>) item.getType())
+        .getMember(item)
+        .clampedLongValueIn(UnitLookup.BYTE);
+  }
 }

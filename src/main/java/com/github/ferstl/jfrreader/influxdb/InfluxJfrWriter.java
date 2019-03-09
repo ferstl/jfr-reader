@@ -2,6 +2,7 @@ package com.github.ferstl.jfrreader.influxdb;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -9,6 +10,7 @@ import java.time.Instant;
 import java.util.Map;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
+import org.influxdb.dto.Point;
 import org.openjdk.jmc.common.item.IItemCollection;
 import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
@@ -24,11 +26,11 @@ import com.github.ferstl.jfrreader.extractor.JvmInfoEventExtractor;
 public class InfluxJfrWriter {
 
   private final IItemCollection events;
-  private final String applicationName;
+  private final ProcessingMetrics processingMetrics;
 
-  private InfluxJfrWriter(IItemCollection events, String applicationName) {
+  private InfluxJfrWriter(IItemCollection events, ProcessingMetrics processingMetrics) {
     this.events = events;
-    this.applicationName = applicationName;
+    this.processingMetrics = processingMetrics;
   }
 
   public static void main(String[] args) {
@@ -42,12 +44,17 @@ public class InfluxJfrWriter {
 
   public static InfluxJfrWriter fromFile(Path flightRecording, String applicationName) {
     try {
-      Instant start = Instant.now();
-      System.out.println("Start reading Flight Recorder data: (" + start + ")");
-      IItemCollection events = JfrLoaderToolkit.loadEvents(flightRecording.toFile());
-      System.out.println("Flight recorder events read. Took " + Duration.between(start, Instant.now()));
+      ProcessingMetrics processingMetrics = new ProcessingMetrics();
+      processingMetrics.applicationName = applicationName;
+      processingMetrics.dataSizeBytes = Files.size(flightRecording);
+      processingMetrics.startTime = Instant.now();
 
-      return new InfluxJfrWriter(events, applicationName);
+      System.out.println("Start reading Flight Recorder data: (" + processingMetrics.startTime + ")");
+      IItemCollection events = JfrLoaderToolkit.loadEvents(flightRecording.toFile());
+      processingMetrics.parsingDuration = Duration.between(processingMetrics.startTime, Instant.now());
+      System.out.println("Flight recorder events read. Took " + processingMetrics.parsingDuration);
+
+      return new InfluxJfrWriter(events, processingMetrics);
     } catch (IOException | CouldNotLoadRecordingException e) {
       throw new IllegalArgumentException("Unable to load flight recording " + flightRecording, e);
     }
@@ -55,13 +62,18 @@ public class InfluxJfrWriter {
 
   public static InfluxJfrWriter fromData(byte[] data, String applicationName) {
     try {
-      Instant start = Instant.now();
-      System.out.println("Start reading Flight Recorder data: (" + start + ", " + data.length + " bytes)");
+      ProcessingMetrics processingMetrics = new ProcessingMetrics();
+      processingMetrics.applicationName = applicationName;
+      processingMetrics.dataSizeBytes = data.length;
+      processingMetrics.startTime = Instant.now();
+
+      System.out.println("Start reading Flight Recorder data: (" + processingMetrics.startTime + ", " + data.length + " bytes)");
       ByteArrayInputStream inputStream = new ByteArrayInputStream(data);
       IItemCollection events = JfrLoaderToolkit.loadEvents(inputStream);
-      System.out.println("Flight recorder events read. Took " + Duration.between(start, Instant.now()));
+      processingMetrics.parsingDuration = Duration.between(processingMetrics.startTime, Instant.now());
+      System.out.println("Flight recorder events read. Took " + processingMetrics.parsingDuration);
 
-      return new InfluxJfrWriter(events, applicationName);
+      return new InfluxJfrWriter(events, processingMetrics);
     } catch (IOException | CouldNotLoadRecordingException e) {
       throw new IllegalArgumentException("Unable to load flight recording from bytes", e);
     }
@@ -74,11 +86,27 @@ public class InfluxJfrWriter {
       influxDB.setDatabase("jfr");
       influxDB.enableBatch();
       ItemProcessorRegistry registry = createEventRecorderRegistry(influxDB);
-      ItemCollectionProcessor itemCollectionProcessor = new ItemCollectionProcessor(this.applicationName, registry);
+      ItemCollectionProcessor itemCollectionProcessor = new ItemCollectionProcessor(this.processingMetrics.applicationName, registry);
 
       itemCollectionProcessor.processEvents(this.events);
+
+      this.processingMetrics.endTime = Instant.now();
+      this.processingMetrics.processingDuration = Duration.between(startProcessing, this.processingMetrics.endTime);
+      writeMetadata(influxDB);
     }
-    System.out.println("Event processing finished. Took " + Duration.between(startProcessing, Instant.now()));
+    System.out.println("Event processing finished. Took " + this.processingMetrics.processingDuration);
+  }
+
+  private void writeMetadata(InfluxDB influxDB) {
+    influxDB.write(Point.measurement("jfr_processing")
+        .addField("application_name", this.processingMetrics.applicationName)
+        .addField("data_size_bytes", this.processingMetrics.dataSizeBytes)
+        .addField("start_time_epochms", this.processingMetrics.startTime.toEpochMilli())
+        .addField("end_time_epochms", this.processingMetrics.startTime.toEpochMilli())
+        .addField("parsing_duration_ms", this.processingMetrics.parsingDuration.toMillis())
+        .addField("processing_duration_ms", this.processingMetrics.processingDuration.toMillis())
+        .build()
+    );
   }
 
   private static ItemProcessorRegistry createEventRecorderRegistry(InfluxDB influxDB) {
@@ -97,5 +125,15 @@ public class InfluxJfrWriter {
             JdkTypeIDs.CPU_LOAD, new CpuLoadDataPointCreator(influxDB, new CpuLoadEventExtractor())
         )
     );
+  }
+
+  private static class ProcessingMetrics {
+
+    private String applicationName;
+    private long dataSizeBytes;
+    private Instant startTime;
+    private Duration parsingDuration;
+    private Duration processingDuration;
+    private Instant endTime;
   }
 }

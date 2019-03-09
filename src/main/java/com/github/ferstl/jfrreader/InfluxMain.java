@@ -2,6 +2,8 @@ package com.github.ferstl.jfrreader;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
@@ -25,9 +27,15 @@ public class InfluxMain {
     Path recording = Paths.get(args[0]);
     String applicationName = args[1];
 
-    IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile());
-    System.out.println("Flight recorder events read.");
+    Instant start = Instant.now();
+    System.out.println("Start reading Flight Recorder data: (" + start + ")");
 
+    IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile());
+
+    Instant startProcessing = Instant.now();
+    System.out.println("Flight recorder events read. Took " + Duration.between(start, startProcessing));
+
+    System.out.println("Start processing events (" + startProcessing + ")");
     try (InfluxDB influxDB = InfluxDBFactory.connect("http://localhost:8086", "jfr", "jfr")) {
       influxDB.setDatabase("jfr");
       influxDB.enableBatch();
@@ -36,6 +44,7 @@ public class InfluxMain {
 
       processor.processEvents(events);
     }
+    System.out.println("Event processing finished. Took " + Duration.between(startProcessing, Instant.now()));
   }
 
   private static EventRecorderRegistry createEventRecorderRegistry(InfluxDB influxDB) {

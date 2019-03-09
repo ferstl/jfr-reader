@@ -1,4 +1,4 @@
-package com.github.ferstl.jfrreader;
+package com.github.ferstl.jfrreader.influxdb;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,18 +10,15 @@ import org.influxdb.InfluxDBFactory;
 import org.openjdk.jmc.common.item.IItemCollection;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
+import com.github.ferstl.jfrreader.ItemCollectionProcessor;
+import com.github.ferstl.jfrreader.ItemProcessorRegistry;
 import com.github.ferstl.jfrreader.extractor.CpuLoadEventExtractor;
 import com.github.ferstl.jfrreader.extractor.GcConfigEventExtractor;
 import com.github.ferstl.jfrreader.extractor.GcPauseEventExtractor;
 import com.github.ferstl.jfrreader.extractor.HeapSummaryEventExtractor;
 import com.github.ferstl.jfrreader.extractor.JvmInfoEventExtractor;
-import com.github.ferstl.jfrreader.influxdb.CpuLoadDataPointCreator;
-import com.github.ferstl.jfrreader.influxdb.GcConfigDataPointCreator;
-import com.github.ferstl.jfrreader.influxdb.GcPauseDataPointCreator;
-import com.github.ferstl.jfrreader.influxdb.HeapSummaryDataPointCreator;
-import com.github.ferstl.jfrreader.influxdb.JvmInfoDataPointCreator;
 
-public class InfluxMain {
+public class InfluxJfrWriter {
 
   public static void main(String[] args) throws Exception {
     Path recording = Paths.get(args[0]);

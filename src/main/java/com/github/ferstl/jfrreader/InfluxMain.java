@@ -40,9 +40,9 @@ public class InfluxMain {
       influxDB.setDatabase("jfr");
       influxDB.enableBatch();
       EventRecorderRegistry registry = createEventRecorderRegistry(influxDB);
-      EventProcessor processor = new EventProcessor(applicationName, registry);
+      ItemCollectionProcessor itemCollectionProcessor = new ItemCollectionProcessor(applicationName, registry);
 
-      processor.processEvents(events);
+      itemCollectionProcessor.processEvents(events);
     }
     System.out.println("Event processing finished. Took " + Duration.between(startProcessing, Instant.now()));
   }

@@ -7,12 +7,12 @@ import org.openjdk.jmc.common.item.IItemIterable;
 import org.openjdk.jmc.common.item.IType;
 import com.github.ferstl.jfrreader.extractor.ItemAttributeExtractor;
 
-public class EventProcessor {
+public class ItemCollectionProcessor {
 
   private final String applicationName;
   private final EventRecorderRegistry eventRecorderRegistry;
 
-  public EventProcessor(String applicationName, EventRecorderRegistry eventRecorderRegistry) {
+  public ItemCollectionProcessor(String applicationName, EventRecorderRegistry eventRecorderRegistry) {
     this.applicationName = applicationName;
     this.eventRecorderRegistry = eventRecorderRegistry;
   }

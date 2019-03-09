@@ -1,5 +1,7 @@
 package com.github.ferstl.jfrreader.influxdb;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -8,6 +10,7 @@ import java.util.Map;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.openjdk.jmc.common.item.IItemCollection;
+import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
 import com.github.ferstl.jfrreader.ItemCollectionProcessor;
@@ -20,26 +23,60 @@ import com.github.ferstl.jfrreader.extractor.JvmInfoEventExtractor;
 
 public class InfluxJfrWriter {
 
-  public static void main(String[] args) throws Exception {
+  private final IItemCollection events;
+  private final String applicationName;
+
+  private InfluxJfrWriter(IItemCollection events, String applicationName) {
+    this.events = events;
+    this.applicationName = applicationName;
+  }
+
+  public static void main(String[] args) {
     Path recording = Paths.get(args[0]);
     String applicationName = args[1];
 
-    Instant start = Instant.now();
-    System.out.println("Start reading Flight Recorder data: (" + start + ")");
+    InfluxJfrWriter writer = InfluxJfrWriter.fromFile(recording, applicationName);
 
-    IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile());
+    writer.writeEvents();
+  }
 
+  public static InfluxJfrWriter fromFile(Path flightRecoring, String applicationName) {
+    try {
+      Instant start = Instant.now();
+      System.out.println("Start reading Flight Recorder data: (" + start + ")");
+      IItemCollection events = JfrLoaderToolkit.loadEvents(flightRecoring.toFile());
+      System.out.println("Flight recorder events read. Took " + Duration.between(start, Instant.now()));
+
+      return new InfluxJfrWriter(events, applicationName);
+    } catch (IOException | CouldNotLoadRecordingException e) {
+      throw new IllegalArgumentException("Unable to load flight recording " + flightRecoring, e);
+    }
+  }
+
+  public static InfluxJfrWriter fromData(byte[] data, String applicationName) {
+    try {
+      Instant start = Instant.now();
+      System.out.println("Start reading Flight Recorder data: (" + start + ", " + data.length + " bytes)");
+      ByteArrayInputStream inputStream = new ByteArrayInputStream(data);
+      IItemCollection events = JfrLoaderToolkit.loadEvents(inputStream);
+      System.out.println("Flight recorder events read. Took " + Duration.between(start, Instant.now()));
+
+      return new InfluxJfrWriter(events, applicationName);
+    } catch (IOException | CouldNotLoadRecordingException e) {
+      throw new IllegalArgumentException("Unable to load flight recording from bytes", e);
+    }
+  }
+
+  public void writeEvents() {
     Instant startProcessing = Instant.now();
-    System.out.println("Flight recorder events read. Took " + Duration.between(start, startProcessing));
-
     System.out.println("Start processing events (" + startProcessing + ")");
     try (InfluxDB influxDB = InfluxDBFactory.connect("http://localhost:8086", "jfr", "jfr")) {
       influxDB.setDatabase("jfr");
       influxDB.enableBatch();
       ItemProcessorRegistry registry = createEventRecorderRegistry(influxDB);
-      ItemCollectionProcessor itemCollectionProcessor = new ItemCollectionProcessor(applicationName, registry);
+      ItemCollectionProcessor itemCollectionProcessor = new ItemCollectionProcessor(this.applicationName, registry);
 
-      itemCollectionProcessor.processEvents(events);
+      itemCollectionProcessor.processEvents(this.events);
     }
     System.out.println("Event processing finished. Took " + Duration.between(startProcessing, Instant.now()));
   }

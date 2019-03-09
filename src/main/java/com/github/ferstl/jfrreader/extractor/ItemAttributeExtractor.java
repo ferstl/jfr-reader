@@ -65,4 +65,11 @@ public class ItemAttributeExtractor {
         .getMember(item)
         .clampedLongValueIn(UnitLookup.BYTE);
   }
+
+  static long getPercent(IItem item, IAttribute<IQuantity> attribute) {
+    return attribute
+        .getAccessor((IType<IItem>) item.getType())
+        .getMember(item)
+        .clampedLongValueIn(UnitLookup.PERCENT);
+  }
 }

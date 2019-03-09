@@ -8,10 +8,12 @@ import org.influxdb.InfluxDBFactory;
 import org.openjdk.jmc.common.item.IItemCollection;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import org.openjdk.jmc.flightrecorder.jdk.JdkTypeIDs;
+import com.github.ferstl.jfrreader.extractor.CpuLoadEventExtractor;
 import com.github.ferstl.jfrreader.extractor.GcConfigEventExtractor;
 import com.github.ferstl.jfrreader.extractor.GcPauseEventExtractor;
 import com.github.ferstl.jfrreader.extractor.HeapSummaryEventExtractor;
 import com.github.ferstl.jfrreader.extractor.JvmInfoEventExtractor;
+import com.github.ferstl.jfrreader.influxdb.CpuLoadDataPointCreator;
 import com.github.ferstl.jfrreader.influxdb.GcConfigDataPointCreator;
 import com.github.ferstl.jfrreader.influxdb.GcPauseDataPointCreator;
 import com.github.ferstl.jfrreader.influxdb.HeapSummaryDataPointCreator;
@@ -28,7 +30,6 @@ public class InfluxMain {
 
     try (InfluxDB influxDB = InfluxDBFactory.connect("http://localhost:8086", "jfr", "jfr")) {
       influxDB.setDatabase("jfr");
-
       EventRecorderRegistry registry = createEventRecorderRegistry(influxDB);
       EventProcessor processor = new EventProcessor(applicationName, registry);
 
@@ -42,7 +43,8 @@ public class InfluxMain {
             JdkTypeIDs.GC_PAUSE, new GcPauseDataPointCreator(influxDB, new GcPauseEventExtractor()),
             JdkTypeIDs.GC_CONF, new GcConfigDataPointCreator(influxDB, new GcConfigEventExtractor()),
             JdkTypeIDs.VM_INFO, new JvmInfoDataPointCreator(influxDB, new JvmInfoEventExtractor()),
-            JdkTypeIDs.HEAP_SUMMARY, new HeapSummaryDataPointCreator(influxDB, new HeapSummaryEventExtractor())
+            JdkTypeIDs.HEAP_SUMMARY, new HeapSummaryDataPointCreator(influxDB, new HeapSummaryEventExtractor()),
+            JdkTypeIDs.CPU_LOAD, new CpuLoadDataPointCreator(influxDB, new CpuLoadEventExtractor())
         )
     );
   }

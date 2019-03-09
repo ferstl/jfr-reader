@@ -53,6 +53,13 @@ public class ItemAttributeExtractor {
         .longValue();
   }
 
+  static double getDouble(IItem item, IAttribute<IQuantity> attribute) {
+    return attribute
+        .getAccessor((IType<IItem>) item.getType())
+        .getMember(item)
+        .doubleValue();
+  }
+
   static Boolean getBoolean(IItem item, IAttribute<Boolean> attribute) {
     return attribute
         .getAccessor((IType<IItem>) item.getType())
@@ -64,12 +71,5 @@ public class ItemAttributeExtractor {
         .getAccessor((IType<IItem>) item.getType())
         .getMember(item)
         .clampedLongValueIn(UnitLookup.BYTE);
-  }
-
-  static long getPercent(IItem item, IAttribute<IQuantity> attribute) {
-    return attribute
-        .getAccessor((IType<IItem>) item.getType())
-        .getMember(item)
-        .clampedLongValueIn(UnitLookup.PERCENT);
   }
 }

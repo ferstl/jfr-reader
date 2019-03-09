@@ -39,7 +39,7 @@ public class InfluxMain {
     try (InfluxDB influxDB = InfluxDBFactory.connect("http://localhost:8086", "jfr", "jfr")) {
       influxDB.setDatabase("jfr");
       influxDB.enableBatch();
-      EventRecorderRegistry registry = createEventRecorderRegistry(influxDB);
+      ItemProcessorRegistry registry = createEventRecorderRegistry(influxDB);
       ItemCollectionProcessor itemCollectionProcessor = new ItemCollectionProcessor(applicationName, registry);
 
       itemCollectionProcessor.processEvents(events);
@@ -47,10 +47,10 @@ public class InfluxMain {
     System.out.println("Event processing finished. Took " + Duration.between(startProcessing, Instant.now()));
   }
 
-  private static EventRecorderRegistry createEventRecorderRegistry(InfluxDB influxDB) {
+  private static ItemProcessorRegistry createEventRecorderRegistry(InfluxDB influxDB) {
     GcPauseEventExtractor gcPauseEventExtractor = new GcPauseEventExtractor();
 
-    return new EventRecorderRegistry(
+    return new ItemProcessorRegistry(
         Map.of(
             JdkTypeIDs.GC_PAUSE, new GcPauseDataPointCreator(influxDB, gcPauseEventExtractor, "total"),
             JdkTypeIDs.GC_PAUSE_L1, new GcPauseDataPointCreator(influxDB, gcPauseEventExtractor, "l1"),

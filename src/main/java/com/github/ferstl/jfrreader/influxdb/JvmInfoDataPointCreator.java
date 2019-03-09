@@ -3,11 +3,11 @@ package com.github.ferstl.jfrreader.influxdb;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
 import org.openjdk.jmc.common.item.IItem;
-import com.github.ferstl.jfrreader.EventRecorder;
+import com.github.ferstl.jfrreader.ItemProcessor;
 import com.github.ferstl.jfrreader.extractor.JvmInfoEventExtractor;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
-public class JvmInfoDataPointCreator implements EventRecorder {
+public class JvmInfoDataPointCreator implements ItemProcessor {
 
   private final InfluxDB influxDB;
   private final JvmInfoEventExtractor eventExtractor;
@@ -18,7 +18,7 @@ public class JvmInfoDataPointCreator implements EventRecorder {
   }
 
   @Override
-  public void recordEvent(long startTimeEpochNs, IItem item, String applicationName) {
+  public void processEvent(long startTimeEpochNs, IItem item, String applicationName) {
     this.influxDB.write(Point.measurement("jvm_info")
         .time(startTimeEpochNs, NANOSECONDS)
         .addField("jvm_name", this.eventExtractor.getJvmName(item))

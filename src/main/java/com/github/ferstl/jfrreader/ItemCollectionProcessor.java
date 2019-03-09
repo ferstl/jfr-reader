@@ -10,22 +10,22 @@ import com.github.ferstl.jfrreader.extractor.ItemAttributeExtractor;
 public class ItemCollectionProcessor {
 
   private final String applicationName;
-  private final EventRecorderRegistry eventRecorderRegistry;
+  private final ItemProcessorRegistry itemProcessorRegistry;
 
-  public ItemCollectionProcessor(String applicationName, EventRecorderRegistry eventRecorderRegistry) {
+  public ItemCollectionProcessor(String applicationName, ItemProcessorRegistry itemProcessorRegistry) {
     this.applicationName = applicationName;
-    this.eventRecorderRegistry = eventRecorderRegistry;
+    this.itemProcessorRegistry = itemProcessorRegistry;
   }
 
   public void processEvents(IItemCollection events) {
     for (IItemIterable eventTypeEntry : events) {
       IType<IItem> type = eventTypeEntry.getType();
-      Optional<EventRecorder> recorderOptional = this.eventRecorderRegistry.getRecorder(type.getIdentifier());
-      if (recorderOptional.isPresent()) {
+      Optional<ItemProcessor> processorOptional = this.itemProcessorRegistry.getItemProcessor(type.getIdentifier());
+      if (processorOptional.isPresent()) {
         for (IItem item : eventTypeEntry) {
-          EventRecorder recorder = recorderOptional.get();
+          ItemProcessor processor = processorOptional.get();
           long startTime = ItemAttributeExtractor.getEventStartTimeNs(item);
-          recorder.recordEvent(startTime, item, this.applicationName);
+          processor.processEvent(startTime, item, this.applicationName);
         }
       }
     }

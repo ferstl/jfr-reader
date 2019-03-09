@@ -3,11 +3,11 @@ package com.github.ferstl.jfrreader.influxdb;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
 import org.openjdk.jmc.common.item.IItem;
-import com.github.ferstl.jfrreader.EventRecorder;
+import com.github.ferstl.jfrreader.ItemProcessor;
 import com.github.ferstl.jfrreader.extractor.HeapSummaryEventExtractor;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
-public class HeapSummaryDataPointCreator implements EventRecorder {
+public class HeapSummaryDataPointCreator implements ItemProcessor {
 
   private final InfluxDB influxDB;
   private final HeapSummaryEventExtractor eventExtractor;
@@ -18,7 +18,7 @@ public class HeapSummaryDataPointCreator implements EventRecorder {
   }
 
   @Override
-  public void recordEvent(long startTimeEpochNs, IItem item, String applicationName) {
+  public void processEvent(long startTimeEpochNs, IItem item, String applicationName) {
     this.influxDB.write(Point.measurement("gc_heap")
         .time(startTimeEpochNs, NANOSECONDS)
         .addField("gc_id", this.eventExtractor.getGcId(item))

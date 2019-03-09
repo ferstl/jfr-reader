@@ -3,11 +3,11 @@ package com.github.ferstl.jfrreader.influxdb;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
 import org.openjdk.jmc.common.item.IItem;
-import com.github.ferstl.jfrreader.EventRecorder;
+import com.github.ferstl.jfrreader.ItemProcessor;
 import com.github.ferstl.jfrreader.extractor.GcConfigEventExtractor;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
-public class GcConfigDataPointCreator implements EventRecorder {
+public class GcConfigDataPointCreator implements ItemProcessor {
 
   private final InfluxDB influxDB;
   private final GcConfigEventExtractor eventExtractor;
@@ -18,7 +18,7 @@ public class GcConfigDataPointCreator implements EventRecorder {
   }
 
   @Override
-  public void recordEvent(long startTimeEpochNs, IItem item, String applicationName) {
+  public void processEvent(long startTimeEpochNs, IItem item, String applicationName) {
     Boolean explicitGcEnabled = this.eventExtractor.getExplicitGcEnabled(item);
     Boolean explicitGcConcurrent = this.eventExtractor.getExplicitGcConcurrent(item);
 

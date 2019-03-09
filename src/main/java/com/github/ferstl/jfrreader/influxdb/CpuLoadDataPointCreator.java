@@ -3,11 +3,11 @@ package com.github.ferstl.jfrreader.influxdb;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
 import org.openjdk.jmc.common.item.IItem;
-import com.github.ferstl.jfrreader.EventRecorder;
+import com.github.ferstl.jfrreader.ItemProcessor;
 import com.github.ferstl.jfrreader.extractor.CpuLoadEventExtractor;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
-public class CpuLoadDataPointCreator implements EventRecorder {
+public class CpuLoadDataPointCreator implements ItemProcessor {
 
   private final InfluxDB influxDB;
   private final CpuLoadEventExtractor eventExtractor;
@@ -18,7 +18,7 @@ public class CpuLoadDataPointCreator implements EventRecorder {
   }
 
   @Override
-  public void recordEvent(long startTimeEpochNs, IItem item, String applicationName) {
+  public void processEvent(long startTimeEpochNs, IItem item, String applicationName) {
     this.influxDB.write(Point.measurement("cpu_load")
         .time(startTimeEpochNs, NANOSECONDS)
         .addField("jvm_user_percentage", this.eventExtractor.getJvmUserPercent(item))

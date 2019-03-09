@@ -1,13 +1,11 @@
 package com.github.ferstl.jfrreader;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.Map;
-import org.openjdk.jmc.common.item.IItemCollection;
-import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
-import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
+import java.util.concurrent.TimeUnit;
+import com.github.ferstl.jfrreader.influxdb.InfluxJfrWriter;
 import com.sun.tools.attach.AttachNotSupportedException;
 import com.sun.tools.attach.VirtualMachine;
 import jdk.management.jfr.FlightRecorderMXBean;
@@ -19,7 +17,8 @@ public class Main {
   public static void main(String[] args) throws Exception {
     // Use the PID of a running JVM
     String pid = args[0];
-    String recordingName = args[1];
+    String applicationName = args[1];
+    String recordingName = args[2];
     String managementUrl = getLocalManagementUrl(pid);
 
     try (FlightRecorderConnection connection = FlightRecorderConnection.fromJmxServiceUrl(managementUrl)) {
@@ -27,18 +26,18 @@ public class Main {
       RecordingInfo originalRecording = connection.getRecordingByName(recordingName);
 
       Instant nextStartTime = Instant.ofEpochMilli(0);
-      for (int i = 0; i < 1000; i++) {
-        System.out.println("Start iteration " + i);
+      while (true) {
         RecordingInfo clonedRecording = cloneRecording(connection, originalRecording);
         byte[] data = readRecording(flightRecorder, clonedRecording, nextStartTime);
-        parseRecording(data);
+        System.out.println("Read " + data.length + " bytes of flight recorder data.");
+        InfluxJfrWriter influxJfrWriter = InfluxJfrWriter.fromData(data, applicationName);
+        influxJfrWriter.writeEvents();
         nextStartTime = clonedRecording.getStopTime();
+
+        System.out.println("Waiting for next iteration");
+        TimeUnit.SECONDS.sleep(60);
       }
     }
-  }
-
-  private static void parseRecording(byte[] data) throws IOException, CouldNotLoadRecordingException {
-    IItemCollection events = JfrLoaderToolkit.loadEvents(new ByteArrayInputStream(data));
   }
 
   private static String getLocalManagementUrl(String pid) throws AttachNotSupportedException, IOException {

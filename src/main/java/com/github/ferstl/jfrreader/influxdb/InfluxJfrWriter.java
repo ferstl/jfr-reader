@@ -40,16 +40,16 @@ public class InfluxJfrWriter {
     writer.writeEvents();
   }
 
-  public static InfluxJfrWriter fromFile(Path flightRecoring, String applicationName) {
+  public static InfluxJfrWriter fromFile(Path flightRecording, String applicationName) {
     try {
       Instant start = Instant.now();
       System.out.println("Start reading Flight Recorder data: (" + start + ")");
-      IItemCollection events = JfrLoaderToolkit.loadEvents(flightRecoring.toFile());
+      IItemCollection events = JfrLoaderToolkit.loadEvents(flightRecording.toFile());
       System.out.println("Flight recorder events read. Took " + Duration.between(start, Instant.now()));
 
       return new InfluxJfrWriter(events, applicationName);
     } catch (IOException | CouldNotLoadRecordingException e) {
-      throw new IllegalArgumentException("Unable to load flight recording " + flightRecoring, e);
+      throw new IllegalArgumentException("Unable to load flight recording " + flightRecording, e);
     }
   }
 

@@ -30,6 +30,7 @@ public class InfluxMain {
 
     try (InfluxDB influxDB = InfluxDBFactory.connect("http://localhost:8086", "jfr", "jfr")) {
       influxDB.setDatabase("jfr");
+      influxDB.enableBatch();
       EventRecorderRegistry registry = createEventRecorderRegistry(influxDB);
       EventProcessor processor = new EventProcessor(applicationName, registry);
 

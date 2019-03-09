@@ -11,10 +11,12 @@ public class GcPauseDataPointCreator implements EventRecorder {
 
   private final InfluxDB influxDB;
   private final GcPauseEventExtractor eventExtractor;
+  private final String pauseType;
 
-  public GcPauseDataPointCreator(InfluxDB influxDB, GcPauseEventExtractor eventExtractor) {
+  public GcPauseDataPointCreator(InfluxDB influxDB, GcPauseEventExtractor eventExtractor, String pauseType) {
     this.influxDB = influxDB;
     this.eventExtractor = eventExtractor;
+    this.pauseType = pauseType;
   }
 
   @Override
@@ -24,6 +26,7 @@ public class GcPauseDataPointCreator implements EventRecorder {
         .addField("gc_name", this.eventExtractor.getGcName(item))
         .addField("gc_id", this.eventExtractor.getGcId(item))
         .addField("pause_time_us", this.eventExtractor.getGcDurationUs(item))
+        .tag("pause_type", this.pauseType)
         .tag("application", applicationName)
         .build()
     );

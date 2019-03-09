@@ -41,7 +41,11 @@ public class InfluxMain {
   private static EventRecorderRegistry createEventRecorderRegistry(InfluxDB influxDB) {
     return new EventRecorderRegistry(
         Map.of(
-            JdkTypeIDs.GC_PAUSE, new GcPauseDataPointCreator(influxDB, new GcPauseEventExtractor()),
+            JdkTypeIDs.GC_PAUSE, new GcPauseDataPointCreator(influxDB, new GcPauseEventExtractor(), "total"),
+            JdkTypeIDs.GC_PAUSE_L1, new GcPauseDataPointCreator(influxDB, new GcPauseEventExtractor(), "l1"),
+            JdkTypeIDs.GC_PAUSE_L2, new GcPauseDataPointCreator(influxDB, new GcPauseEventExtractor(), "l2"),
+            JdkTypeIDs.GC_PAUSE_L3, new GcPauseDataPointCreator(influxDB, new GcPauseEventExtractor(), "l3"),
+            JdkTypeIDs.GC_PAUSE_L4, new GcPauseDataPointCreator(influxDB, new GcPauseEventExtractor(), "l4"),
             JdkTypeIDs.GC_CONF, new GcConfigDataPointCreator(influxDB, new GcConfigEventExtractor()),
             JdkTypeIDs.VM_INFO, new JvmInfoDataPointCreator(influxDB, new JvmInfoEventExtractor()),
             JdkTypeIDs.HEAP_SUMMARY, new HeapSummaryDataPointCreator(influxDB, new HeapSummaryEventExtractor()),

@@ -37,20 +37,30 @@ public class JfrGenericReader {
   private static final String LONG_STORED = "org.openjdk.jmc.common.unit.ScalarQuantity$LongStored";
   private static final String DOUBLE_STORED = "org.openjdk.jmc.common.unit.ScalarQuantity$DoubleStored";
 
+  private final IItemCollection events;
+
+  public JfrGenericReader(IItemCollection events) {
+    this.events = events;
+  }
+
   public static void main(String[] args) throws Exception {
     Path recording = Paths.get(args[0]);
     IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile());
     System.out.println("Loaded recording: " + recording);
 
+    JfrGenericReader reader = new JfrGenericReader(events);
     JfrEventVisitor<JfrEventInfo> visitor = new JfrEventVisitorImpl();
+    reader.accept(visitor);
+  }
 
-    for (IItemIterable eventTypeEntry : events) {
+  public final <T> void accept(JfrEventVisitor<T> visitor) {
+    for (IItemIterable eventTypeEntry : this.events) {
       IType<IItem> eventType = eventTypeEntry.getType();
       Map<IAccessorKey<?>, ? extends IDescribable> accessorKeys = eventType.getAccessorKeys();
 
       for (IItem eventItem : eventTypeEntry) {
         long startTimeEpochNanos = getStartTimeInEpochNanos(eventItem);
-        JfrEventInfo context = visitor.startEvent(new JfrEventInfo(eventType.getIdentifier(), startTimeEpochNanos));
+        T context = visitor.startEvent(new JfrEventInfo(eventType.getIdentifier(), startTimeEpochNanos));
 
         for (IAccessorKey<?> accessorKey : accessorKeys.keySet()) {
           // Start time is always part of JfrEventInfo
@@ -64,7 +74,6 @@ public class JfrGenericReader {
 
         visitor.endEvent(context);
       }
-
     }
   }
 
@@ -75,7 +84,7 @@ public class JfrGenericReader {
         .clampedLongValueIn(UnitLookup.EPOCH_NS);
   }
 
-  private static void processMember(JfrEventVisitor<JfrEventInfo> visitor, JfrEventInfo context, IAccessorKey<?> accessorKey, Object value) {
+  private static <T> void processMember(JfrEventVisitor<T> visitor, T context, IAccessorKey<?> accessorKey, Object value) {
     if (value == null) {
       return;
     }

@@ -85,7 +85,7 @@ public class JfrGenericReader {
   }
 
   private static void processMember(IType<IItem> eventType, IAccessorKey<?> accessorKey, Object value) {
-    JfrEventVisitor visitor = new JfrEventVisitor();
+    JfrEventVisitor visitor = new JfrEventVisitorImpl();
     if (value == null) {
       return;
     }

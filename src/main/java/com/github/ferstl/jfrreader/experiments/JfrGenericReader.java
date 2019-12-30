@@ -1,5 +1,7 @@
 package com.github.ferstl.jfrreader.experiments;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -29,6 +31,7 @@ import org.openjdk.jmc.common.unit.LinearUnit;
 import org.openjdk.jmc.common.unit.TimestampUnit;
 import org.openjdk.jmc.common.unit.UnitLookup;
 import org.openjdk.jmc.common.util.LabeledIdentifier;
+import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
 import org.openjdk.jmc.flightrecorder.JfrAttributes;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 
@@ -43,14 +46,24 @@ public class JfrGenericReader {
     this.events = events;
   }
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     Path recording = Paths.get(args[0]);
-    IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile());
+    JfrGenericReader reader = JfrGenericReader.forRecording(recording);
     System.out.println("Loaded recording: " + recording);
 
-    JfrGenericReader reader = new JfrGenericReader(events);
     JfrEventVisitor<JfrEventInfo> visitor = new JfrEventVisitorImpl();
     reader.accept(visitor);
+  }
+
+  public static JfrGenericReader forRecording(Path recording) {
+    try {
+      IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile());
+      return new JfrGenericReader(events);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    } catch (CouldNotLoadRecordingException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   public final <T> void accept(JfrEventVisitor<T> visitor) {

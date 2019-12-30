@@ -42,7 +42,7 @@ public class JfrGenericReader {
     IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile());
     System.out.println("Loaded recording: " + recording);
 
-    JfrEventVisitor visitor = new JfrEventVisitorImpl();
+    JfrEventVisitor<JfrEventInfo> visitor = new JfrEventVisitorImpl();
 
     for (IItemIterable eventTypeEntry : events) {
       IType<IItem> eventType = eventTypeEntry.getType();
@@ -50,8 +50,7 @@ public class JfrGenericReader {
 
       for (IItem eventItem : eventTypeEntry) {
         long startTimeEpochNanos = getStartTimeInEpochNanos(eventItem);
-        JfrEventInfo eventInfo = new JfrEventInfo(eventType.getIdentifier(), startTimeEpochNanos);
-        visitor.startEvent(eventInfo);
+        JfrEventInfo context = visitor.startEvent(new JfrEventInfo(eventType.getIdentifier(), startTimeEpochNanos));
 
         for (IAccessorKey<?> accessorKey : accessorKeys.keySet()) {
           // Start time is always part of JfrEventInfo
@@ -59,11 +58,11 @@ public class JfrGenericReader {
             IMemberAccessor<?, IItem> accessor = eventType.getAccessor(accessorKey);
             Object value = accessor.getMember(eventItem);
 
-            processMember(visitor, eventInfo, accessorKey, value);
+            processMember(visitor, context, accessorKey, value);
           }
         }
 
-        visitor.endEvent(eventInfo);
+        visitor.endEvent(context);
       }
 
     }
@@ -76,7 +75,7 @@ public class JfrGenericReader {
         .clampedLongValueIn(UnitLookup.EPOCH_NS);
   }
 
-  private static void processMember(JfrEventVisitor visitor, JfrEventInfo eventInfo, IAccessorKey<?> accessorKey, Object value) {
+  private static void processMember(JfrEventVisitor<JfrEventInfo> visitor, JfrEventInfo context, IAccessorKey<?> accessorKey, Object value) {
     if (value == null) {
       return;
     }
@@ -84,60 +83,60 @@ public class JfrGenericReader {
     String attributeIdentifier = accessorKey.getIdentifier();
 
     if (value instanceof String) {
-      visitor.visitString(eventInfo, attributeIdentifier, (String) value);
+      visitor.visitString(context, attributeIdentifier, (String) value);
     } else if (value instanceof Boolean) {
-      visitor.visitBoolean(eventInfo, attributeIdentifier, (Boolean) value);
+      visitor.visitBoolean(context, attributeIdentifier, (Boolean) value);
     } else if (value instanceof ITypedQuantity) {
       ContentType<?> contentType = accessorKey.getContentType();
       ITypedQuantity<?> castedValue = (ITypedQuantity<?>) value;
 
       if (contentType == UnitLookup.MEMORY) {
-        visitor.visitMemory(eventInfo, attributeIdentifier, castedValue.longValue(), castedValue.getUnit());
+        visitor.visitMemory(context, attributeIdentifier, castedValue.longValue(), castedValue.getUnit());
       } else if (contentType == UnitLookup.TIMESPAN) {
-        visitor.visitTimespan(eventInfo, attributeIdentifier, castedValue.longValue(), (LinearUnit) castedValue.getUnit());
+        visitor.visitTimespan(context, attributeIdentifier, castedValue.longValue(), (LinearUnit) castedValue.getUnit());
       } else if (contentType == UnitLookup.TIMESTAMP) {
-        visitor.visitTimestamp(eventInfo, attributeIdentifier, castedValue.longValue(), (TimestampUnit) castedValue.getUnit());
+        visitor.visitTimestamp(context, attributeIdentifier, castedValue.longValue(), (TimestampUnit) castedValue.getUnit());
       } else if (contentType == UnitLookup.PERCENTAGE) {
-        visitor.visitPercentage(eventInfo, attributeIdentifier, castedValue.doubleValue());
+        visitor.visitPercentage(context, attributeIdentifier, castedValue.doubleValue());
       } else if (contentType == UnitLookup.NUMBER) {
         if (LONG_STORED.equals(value.getClass().getName())) {
-          visitor.visitNumber(eventInfo, attributeIdentifier, castedValue.longValue());
+          visitor.visitNumber(context, attributeIdentifier, castedValue.longValue());
         } else if (DOUBLE_STORED.equals(value.getClass().getName())) {
-          visitor.visitNumber(eventInfo, attributeIdentifier, castedValue.doubleValue());
+          visitor.visitNumber(context, attributeIdentifier, castedValue.doubleValue());
         }
       } else if (contentType == UnitLookup.ADDRESS) {
-        visitor.visitAddress(eventInfo, attributeIdentifier, castedValue.longValue());
+        visitor.visitAddress(context, attributeIdentifier, castedValue.longValue());
       } else if (contentType == UnitLookup.FREQUENCY) {
-        visitor.visitFrequency(eventInfo, attributeIdentifier, castedValue.longValue());
+        visitor.visitFrequency(context, attributeIdentifier, castedValue.longValue());
       }
     } else if (value instanceof LabeledIdentifier) {
-      visitor.visitLabeledIdentifier(eventInfo, attributeIdentifier, (LabeledIdentifier) value);
+      visitor.visitLabeledIdentifier(context, attributeIdentifier, (LabeledIdentifier) value);
     } else if (value instanceof IMCClassLoader) {
-      visitor.visitIMCClassLoader(eventInfo, attributeIdentifier, (IMCClassLoader) value);
+      visitor.visitIMCClassLoader(context, attributeIdentifier, (IMCClassLoader) value);
     } else if (value instanceof IMCFrame) {
-      visitor.visitIMCFrame(eventInfo, attributeIdentifier, (IMCFrame) value);
+      visitor.visitIMCFrame(context, attributeIdentifier, (IMCFrame) value);
     } else if (value instanceof IMCMethod) {
-      visitor.visitIMCMethod(eventInfo, attributeIdentifier, (IMCMethod) value);
+      visitor.visitIMCMethod(context, attributeIdentifier, (IMCMethod) value);
     } else if (value instanceof IMCModule) {
-      visitor.visitIMCModule(eventInfo, attributeIdentifier, (IMCModule) value);
+      visitor.visitIMCModule(context, attributeIdentifier, (IMCModule) value);
     } else if (value instanceof IMCOldObject) {
-      visitor.visitIMCOldObject(eventInfo, attributeIdentifier, (IMCOldObject) value);
+      visitor.visitIMCOldObject(context, attributeIdentifier, (IMCOldObject) value);
     } else if (value instanceof IMCOldObjectArray) {
-      visitor.visitIMCOldObjectArray(eventInfo, attributeIdentifier, (IMCOldObjectArray) value);
+      visitor.visitIMCOldObjectArray(context, attributeIdentifier, (IMCOldObjectArray) value);
     } else if (value instanceof IMCOldObjectField) {
-      visitor.visitIMCOldObjectField(eventInfo, attributeIdentifier, (IMCOldObjectField) value);
+      visitor.visitIMCOldObjectField(context, attributeIdentifier, (IMCOldObjectField) value);
     } else if (value instanceof IMCOldObjectGcRoot) {
-      visitor.visitIMCOldObjectGcRoot(eventInfo, attributeIdentifier, (IMCOldObjectGcRoot) value);
+      visitor.visitIMCOldObjectGcRoot(context, attributeIdentifier, (IMCOldObjectGcRoot) value);
     } else if (value instanceof IMCPackage) {
-      visitor.visitIMCPackage(eventInfo, attributeIdentifier, (IMCPackage) value);
+      visitor.visitIMCPackage(context, attributeIdentifier, (IMCPackage) value);
     } else if (value instanceof IMCStackTrace) {
-      visitor.visitIMCStackTrace(eventInfo, attributeIdentifier, (IMCStackTrace) value);
+      visitor.visitIMCStackTrace(context, attributeIdentifier, (IMCStackTrace) value);
     } else if (value instanceof IMCThread) {
-      visitor.visitIMCThread(eventInfo, attributeIdentifier, (IMCThread) value);
+      visitor.visitIMCThread(context, attributeIdentifier, (IMCThread) value);
     } else if (value instanceof IMCThreadGroup) {
-      visitor.visitIMCThreadGroup(eventInfo, attributeIdentifier, (IMCThreadGroup) value);
+      visitor.visitIMCThreadGroup(context, attributeIdentifier, (IMCThreadGroup) value);
     } else if (value instanceof IMCType) {
-      visitor.visitIMCType(eventInfo, attributeIdentifier, (IMCType) value);
+      visitor.visitIMCType(context, attributeIdentifier, (IMCType) value);
     } else {
       System.out.println("+".repeat(20) + " Unsupported Type:" + value.getClass() + "+".repeat(20));
     }

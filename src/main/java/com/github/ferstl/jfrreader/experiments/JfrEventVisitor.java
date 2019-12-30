@@ -20,75 +20,81 @@ import org.openjdk.jmc.common.util.LabeledIdentifier;
 
 public interface JfrEventVisitor {
 
-  default void visitString(JfrEventInfo eventInfo, String value) {
+  default void startEvent(JfrEventInfo eventInfo) {
   }
 
-  default void visitNumber(JfrEventInfo eventInfo, long value) {
+  default void endEvent(JfrEventInfo eventInfo) {
   }
 
-  default void visitNumber(JfrEventInfo eventInfo, double value) {
+  default void visitString(JfrEventInfo eventInfo, String attribute, String value) {
   }
 
-  default void visitBoolean(JfrEventInfo eventInfo, boolean value) {
+  default void visitNumber(JfrEventInfo eventInfo, String attribute, long value) {
   }
 
-  default void visitMemory(JfrEventInfo eventInfo, long value, TypedUnit<?> unit) {
+  default void visitNumber(JfrEventInfo eventInfo, String attribute, double value) {
   }
 
-  default void visitTimespan(JfrEventInfo eventInfo, long value, LinearUnit unit) {
+  default void visitBoolean(JfrEventInfo eventInfo, String attribute, boolean value) {
   }
 
-  default void visitTimestamp(JfrEventInfo eventInfo, long value, TimestampUnit unit) {
+  default void visitMemory(JfrEventInfo eventInfo, String attribute, long value, TypedUnit<?> unit) {
   }
 
-  default void visitPercentage(JfrEventInfo eventInfo, double value) {
+  default void visitTimespan(JfrEventInfo eventInfo, String attribute, long value, LinearUnit unit) {
   }
 
-  default void visitAddress(JfrEventInfo eventInfo, long value) {
+  default void visitTimestamp(JfrEventInfo eventInfo, String attribute, long value, TimestampUnit unit) {
   }
 
-  default void visitFrequency(JfrEventInfo eventInfo, long value) {
+  default void visitPercentage(JfrEventInfo eventInfo, String attribute, double value) {
   }
 
-  default void visitLabeledIdentifier(JfrEventInfo eventInfo, LabeledIdentifier value) {
+  default void visitAddress(JfrEventInfo eventInfo, String attribute, long value) {
   }
 
-  default void visitIMCClassLoader(JfrEventInfo eventInfo, IMCClassLoader value) {
+  default void visitFrequency(JfrEventInfo eventInfo, String attribute, long value) {
   }
 
-  default void visitIMCFrame(JfrEventInfo eventInfo, IMCFrame value) {
+  default void visitLabeledIdentifier(JfrEventInfo eventInfo, String attribute, LabeledIdentifier value) {
   }
 
-  default void visitIMCMethod(JfrEventInfo eventInfo, IMCMethod value) {
+  default void visitIMCClassLoader(JfrEventInfo eventInfo, String attribute, IMCClassLoader value) {
   }
 
-  default void visitIMCModule(JfrEventInfo eventInfo, IMCModule value) {
+  default void visitIMCFrame(JfrEventInfo eventInfo, String attribute, IMCFrame value) {
   }
 
-  default void visitIMCOldObject(JfrEventInfo eventInfo, IMCOldObject value) {
+  default void visitIMCMethod(JfrEventInfo eventInfo, String attribute, IMCMethod value) {
   }
 
-  default void visitIMCOldObjectArray(JfrEventInfo eventInfo, IMCOldObjectArray value) {
+  default void visitIMCModule(JfrEventInfo eventInfo, String attribute, IMCModule value) {
   }
 
-  default void visitIMCOldObjectField(JfrEventInfo eventInfo, IMCOldObjectField value) {
+  default void visitIMCOldObject(JfrEventInfo eventInfo, String attribute, IMCOldObject value) {
   }
 
-  default void visitIMCOldObjectGcRoot(JfrEventInfo eventInfo, IMCOldObjectGcRoot value) {
+  default void visitIMCOldObjectArray(JfrEventInfo eventInfo, String attribute, IMCOldObjectArray value) {
   }
 
-  default void visitIMCPackage(JfrEventInfo eventInfo, IMCPackage value) {
+  default void visitIMCOldObjectField(JfrEventInfo eventInfo, String attribute, IMCOldObjectField value) {
   }
 
-  default void visitIMCStackTrace(JfrEventInfo eventInfo, IMCStackTrace value) {
+  default void visitIMCOldObjectGcRoot(JfrEventInfo eventInfo, String attribute, IMCOldObjectGcRoot value) {
   }
 
-  default void visitIMCThread(JfrEventInfo eventInfo, IMCThread value) {
+  default void visitIMCPackage(JfrEventInfo eventInfo, String attribute, IMCPackage value) {
   }
 
-  default void visitIMCThreadGroup(JfrEventInfo eventInfo, IMCThreadGroup value) {
+  default void visitIMCStackTrace(JfrEventInfo eventInfo, String attribute, IMCStackTrace value) {
   }
 
-  default void visitIMCType(JfrEventInfo eventInfo, IMCType value) {
+  default void visitIMCThread(JfrEventInfo eventInfo, String attribute, IMCThread value) {
+  }
+
+  default void visitIMCThreadGroup(JfrEventInfo eventInfo, String attribute, IMCThreadGroup value) {
+  }
+
+  default void visitIMCType(JfrEventInfo eventInfo, String attribute, IMCType value) {
   }
 }

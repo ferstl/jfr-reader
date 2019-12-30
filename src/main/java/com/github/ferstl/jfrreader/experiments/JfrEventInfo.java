@@ -5,12 +5,10 @@ import java.util.Objects;
 public final class JfrEventInfo {
 
   private final String eventIdentifier;
-  private final String attributeIdentifier;
   private final long startTimeEpochNanos;
 
-  public JfrEventInfo(String eventIdentifier, String attributeIdentifier, long startTimeEpochNanos) {
+  public JfrEventInfo(String eventIdentifier, long startTimeEpochNanos) {
     this.eventIdentifier = eventIdentifier;
-    this.attributeIdentifier = attributeIdentifier;
     this.startTimeEpochNanos = startTimeEpochNanos;
   }
 
@@ -18,9 +16,6 @@ public final class JfrEventInfo {
     return this.eventIdentifier;
   }
 
-  public String getAttributeIdentifier() {
-    return this.attributeIdentifier;
-  }
 
   public long getStartTimeEpochNanos() {
     return this.startTimeEpochNanos;
@@ -33,12 +28,11 @@ public final class JfrEventInfo {
 
     JfrEventInfo that = (JfrEventInfo) o;
     return this.startTimeEpochNanos == that.startTimeEpochNanos
-        && Objects.equals(this.eventIdentifier, that.eventIdentifier)
-        && Objects.equals(this.attributeIdentifier, that.attributeIdentifier);
+        && Objects.equals(this.eventIdentifier, that.eventIdentifier);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(this.startTimeEpochNanos, this.eventIdentifier, this.attributeIdentifier);
+    return Objects.hash(this.startTimeEpochNanos, this.eventIdentifier);
   }
 }

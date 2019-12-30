@@ -1,4 +1,4 @@
-package com.github.ferstl.jfrreader.experiments;
+package com.github.ferstl.jfrreader;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -34,31 +34,34 @@ import org.openjdk.jmc.common.util.LabeledIdentifier;
 import org.openjdk.jmc.flightrecorder.CouldNotLoadRecordingException;
 import org.openjdk.jmc.flightrecorder.JfrAttributes;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
+import com.github.ferstl.jfrreader.experiments.JfrEventInfo;
+import com.github.ferstl.jfrreader.experiments.JfrEventVisitor;
+import com.github.ferstl.jfrreader.experiments.JfrEventVisitorImpl;
 
-public class JfrGenericReader {
+public class JfrEventProcessor {
 
   private static final String LONG_STORED = "org.openjdk.jmc.common.unit.ScalarQuantity$LongStored";
   private static final String DOUBLE_STORED = "org.openjdk.jmc.common.unit.ScalarQuantity$DoubleStored";
 
   private final IItemCollection events;
 
-  public JfrGenericReader(IItemCollection events) {
+  public JfrEventProcessor(IItemCollection events) {
     this.events = events;
   }
 
   public static void main(String[] args) {
     Path recording = Paths.get(args[0]);
-    JfrGenericReader reader = JfrGenericReader.forRecording(recording);
+    JfrEventProcessor reader = JfrEventProcessor.forRecording(recording);
     System.out.println("Loaded recording: " + recording);
 
     JfrEventVisitor<JfrEventInfo> visitor = new JfrEventVisitorImpl();
     reader.accept(visitor);
   }
 
-  public static JfrGenericReader forRecording(Path recording) {
+  public static JfrEventProcessor forRecording(Path recording) {
     try {
       IItemCollection events = JfrLoaderToolkit.loadEvents(recording.toFile());
-      return new JfrGenericReader(events);
+      return new JfrEventProcessor(events);
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     } catch (CouldNotLoadRecordingException e) {

@@ -15,7 +15,6 @@ import org.openjdk.jmc.common.IMCThreadGroup;
 import org.openjdk.jmc.common.IMCType;
 import org.openjdk.jmc.common.unit.LinearUnit;
 import org.openjdk.jmc.common.unit.TimestampUnit;
-import org.openjdk.jmc.common.unit.TypedUnit;
 import org.openjdk.jmc.common.util.LabeledIdentifier;
 
 public interface JfrEventVisitor<C> {
@@ -39,7 +38,7 @@ public interface JfrEventVisitor<C> {
   default void visitBoolean(C context, String attribute, boolean value) {
   }
 
-  default void visitMemory(C context, String attribute, long value, TypedUnit<?> unit) {
+  default void visitMemory(C context, String attribute, long value, LinearUnit unit) {
   }
 
   default void visitTimespan(C context, String attribute, long value, LinearUnit unit) {

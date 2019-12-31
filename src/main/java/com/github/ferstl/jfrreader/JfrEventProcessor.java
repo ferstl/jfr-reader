@@ -105,7 +105,7 @@ public class JfrEventProcessor {
       ITypedQuantity<?> castedValue = (ITypedQuantity<?>) value;
 
       if (contentType == UnitLookup.MEMORY) {
-        visitor.visitMemory(context, attributeIdentifier, castedValue.longValue(), castedValue.getUnit());
+        visitor.visitMemory(context, attributeIdentifier, castedValue.longValue(), (LinearUnit) castedValue.getUnit());
       } else if (contentType == UnitLookup.TIMESPAN) {
         visitor.visitTimespan(context, attributeIdentifier, castedValue.longValue(), (LinearUnit) castedValue.getUnit());
       } else if (contentType == UnitLookup.TIMESTAMP) {

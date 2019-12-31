@@ -3,7 +3,6 @@ package com.github.ferstl.jfrreader;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import org.openjdk.jmc.common.IDescribable;
 import org.openjdk.jmc.common.IMCClassLoader;
@@ -36,7 +35,6 @@ import org.openjdk.jmc.flightrecorder.JfrAttributes;
 import org.openjdk.jmc.flightrecorder.JfrLoaderToolkit;
 import com.github.ferstl.jfrreader.experiments.JfrEventInfo;
 import com.github.ferstl.jfrreader.experiments.JfrEventVisitor;
-import com.github.ferstl.jfrreader.experiments.JfrEventVisitorImpl;
 
 public class JfrEventProcessor {
 
@@ -47,15 +45,6 @@ public class JfrEventProcessor {
 
   public JfrEventProcessor(IItemCollection events) {
     this.events = events;
-  }
-
-  public static void main(String[] args) {
-    Path recording = Paths.get(args[0]);
-    JfrEventProcessor reader = JfrEventProcessor.forRecording(recording);
-    System.out.println("Loaded recording: " + recording);
-
-    JfrEventVisitor<JfrEventInfo> visitor = new JfrEventVisitorImpl();
-    reader.accept(visitor);
   }
 
   public static JfrEventProcessor forRecording(Path recording) {

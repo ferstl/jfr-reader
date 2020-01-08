@@ -120,14 +120,6 @@ public class InfluxJfrEventVisitor implements JfrEventVisitor<Point.Builder> {
   }
 
   @Override
-  public void visitIMCFrame(Builder context, String attribute, IMCFrame value) {
-    context.addField(attribute + ".type", value.getType().name());
-    context.addField(attribute + ".byteCodeIndex", requireNonNullElse(value.getBCI(), -1));
-    context.addField(attribute + ".lineNumber", requireNonNullElse(value.getFrameLineNumber(), -1));
-    visitIMCMethod(context, attribute + ".method", value.getMethod());
-  }
-
-  @Override
   public void visitIMCMethod(Builder context, String attribute, IMCMethod value) {
     context.addField(attribute + ".type", value.getType().getFullName());
     context.addField(attribute + ".name", value.getMethodName());

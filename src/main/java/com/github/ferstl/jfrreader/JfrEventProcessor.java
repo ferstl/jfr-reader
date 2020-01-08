@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.util.Map;
 import org.openjdk.jmc.common.IDescribable;
 import org.openjdk.jmc.common.IMCClassLoader;
-import org.openjdk.jmc.common.IMCFrame;
 import org.openjdk.jmc.common.IMCMethod;
 import org.openjdk.jmc.common.IMCModule;
 import org.openjdk.jmc.common.IMCOldObject;
@@ -127,8 +126,6 @@ public class JfrEventProcessor {
       visitor.visitLabeledIdentifier(context, attributeIdentifier, (LabeledIdentifier) value);
     } else if (value instanceof IMCClassLoader) {
       visitor.visitIMCClassLoader(context, attributeIdentifier, (IMCClassLoader) value);
-    } else if (value instanceof IMCFrame) {
-      visitor.visitIMCFrame(context, attributeIdentifier, (IMCFrame) value);
     } else if (value instanceof IMCMethod) {
       visitor.visitIMCMethod(context, attributeIdentifier, (IMCMethod) value);
     } else if (value instanceof IMCModule) {

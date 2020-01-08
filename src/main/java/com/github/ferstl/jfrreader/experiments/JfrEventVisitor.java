@@ -1,7 +1,6 @@
 package com.github.ferstl.jfrreader.experiments;
 
 import org.openjdk.jmc.common.IMCClassLoader;
-import org.openjdk.jmc.common.IMCFrame;
 import org.openjdk.jmc.common.IMCMethod;
 import org.openjdk.jmc.common.IMCModule;
 import org.openjdk.jmc.common.IMCOldObject;
@@ -60,9 +59,6 @@ public interface JfrEventVisitor<C> {
   }
 
   default void visitIMCClassLoader(C context, String attribute, IMCClassLoader value) {
-  }
-
-  default void visitIMCFrame(C context, String attribute, IMCFrame value) {
   }
 
   default void visitIMCMethod(C context, String attribute, IMCMethod value) {

@@ -1,5 +1,7 @@
 package com.github.ferstl.jfrreader.influxdb;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
@@ -28,14 +30,19 @@ import static java.util.Objects.requireNonNullElse;
 public class InfluxJfrEventVisitor implements JfrEventVisitor<Point.Builder> {
 
   private final InfluxDB influxDB;
+  private final Map<String, Long> statistics;
 
   public InfluxJfrEventVisitor(InfluxDB influxDB) {
     this.influxDB = influxDB;
+    this.statistics = new LinkedHashMap<>();
   }
 
   @Override
   public Point.Builder startEvent(JfrEventInfo eventInfo) {
-    return Point.measurement(eventInfo.getEventIdentifier())
+    String eventIdentifier = eventInfo.getEventIdentifier();
+
+    this.statistics.merge(eventIdentifier, 1L, (current, initial) -> current + 1);
+    return Point.measurement(eventIdentifier)
         .time(eventInfo.getStartTimeEpochNanos(), TimeUnit.NANOSECONDS);
   }
 
@@ -193,5 +200,9 @@ public class InfluxJfrEventVisitor implements JfrEventVisitor<Point.Builder> {
   @Override
   public void visitIMCType(Builder context, String attribute, IMCType value) {
     context.addField(attribute, value.getFullName());
+  }
+
+  public Map<String, Long> getStatistics() {
+    return Map.copyOf(this.statistics);
   }
 }

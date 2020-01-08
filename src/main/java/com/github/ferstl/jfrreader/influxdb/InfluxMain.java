@@ -2,6 +2,8 @@ package com.github.ferstl.jfrreader.influxdb;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
+import java.util.Map.Entry;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import com.github.ferstl.jfrreader.JfrEventProcessor;
@@ -19,6 +21,12 @@ public class InfluxMain {
 
       InfluxJfrEventVisitor visitor = new InfluxJfrEventVisitor(influxDb);
       reader.accept(visitor);
+
+      Map<String, Long> statistics = visitor.getStatistics();
+      System.out.println("Statistics for recording");
+      for (Entry<String, Long> entry : statistics.entrySet()) {
+        System.out.println("Event '" + entry.getKey() + "': " + entry.getValue());
+      }
     }
   }
 

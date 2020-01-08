@@ -5,9 +5,6 @@ import java.nio.file.Paths;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import com.github.ferstl.jfrreader.JfrEventProcessor;
-import com.github.ferstl.jfrreader.experiments.JfrEventInfo;
-import com.github.ferstl.jfrreader.experiments.JfrEventVisitor;
-import com.github.ferstl.jfrreader.experiments.JfrEventVisitorImpl;
 
 public class InfluxMain {
 
@@ -23,9 +20,6 @@ public class InfluxMain {
       InfluxJfrEventVisitor visitor = new InfluxJfrEventVisitor(influxDb);
       reader.accept(visitor);
     }
-
-    JfrEventVisitor<JfrEventInfo> visitor = new JfrEventVisitorImpl();
-    reader.accept(visitor);
   }
 
 }

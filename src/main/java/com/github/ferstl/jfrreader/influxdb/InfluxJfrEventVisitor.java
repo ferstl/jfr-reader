@@ -1,5 +1,6 @@
 package com.github.ferstl.jfrreader.influxdb;
 
+import java.lang.reflect.Modifier;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -174,6 +175,8 @@ public class InfluxJfrEventVisitor implements JfrEventVisitor<Point.Builder> {
 
   @Override
   public void visitIMCStackTrace(Builder context, String attribute, IMCStackTrace value) {
+    String stackTrace = renderStackTrace(value);
+    context.addField(attribute, stackTrace);
   }
 
   @Override
@@ -196,5 +199,56 @@ public class InfluxJfrEventVisitor implements JfrEventVisitor<Point.Builder> {
 
   public Map<String, Long> getStatistics() {
     return Map.copyOf(this.statistics);
+  }
+
+  private String renderStackTrace(IMCStackTrace trace) {
+    StringBuilder sb = new StringBuilder("<stackTrace>").append("\n");
+    for (IMCFrame frame : trace.getFrames()) {
+      appendFrame(frame, sb);
+      sb.append("\n");
+    }
+    sb.append("</stackTrace>");
+
+    return sb.toString();
+  }
+
+  private static void appendFrame(IMCFrame frame, StringBuilder sb) {
+    sb.append("  ");
+    sb.append("<frame ");
+    Integer lineNumber = frame.getFrameLineNumber();
+    IMCMethod method = frame.getMethod();
+    sb.append("method=\"");
+    if (method != null) {
+      appendMethod(method, sb);
+    } else {
+      sb.append("null");
+    }
+    sb.append(" line=\"");
+    sb.append(lineNumber);
+    sb.append("\" type=\"").append(frame.getType()).append("\"/>");
+  }
+
+  private static void appendMethod(IMCMethod method, StringBuilder sb) {
+    Integer modifier = method.getModifier();
+    sb.append(formatPackage(method.getType().getPackage()));
+    sb.append(".");
+    sb.append(method.getType().getTypeName());
+    sb.append("#");
+    sb.append(method.getMethodName());
+    sb.append(method.getFormalDescriptor());
+    sb.append("\"");
+    if (modifier != null) {
+      sb.append(" modifier=\"");
+      sb.append(Modifier.toString(method.getModifier()));
+      sb.append("\"");
+    }
+  }
+
+  private static String formatPackage(IMCPackage thePackage) {
+    if (thePackage == null) {
+      return "null";
+    }
+
+    return requireNonNullElse(thePackage.getName(), "null");
   }
 }

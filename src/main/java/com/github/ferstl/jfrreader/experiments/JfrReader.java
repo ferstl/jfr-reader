@@ -99,9 +99,29 @@ public class JfrReader {
         }
       }
 
+
+      readElement(mdIs, strings, 0);
+
       System.out.println("Metadata Size: " + mdSize);
 
       System.out.println("test");
+    }
+  }
+
+  private static void readElement(DataInputStream mdIs, String[] strings, int level) throws IOException {
+    int nameIndex = (int) readCompressedLong(mdIs);
+    String elementName = strings[nameIndex];
+    System.out.println(" ".repeat(level * 2) + elementName);
+    int attributeCount = (int) readCompressedLong(mdIs);
+    for (int i = 0; i < attributeCount; i++) {
+      int keyIndex = (int) readCompressedLong(mdIs);
+      int valueIndex = (int) readCompressedLong(mdIs);
+      System.out.println(" ".repeat(level * 2 + 2) + strings[keyIndex] + " = " + strings[valueIndex]);
+    }
+
+    int childElementCount = (int) readCompressedLong(mdIs);
+    for (int i = 0; i < childElementCount; i++) {
+      readElement(mdIs, strings, level + 1);
     }
   }
 

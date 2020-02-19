@@ -59,7 +59,7 @@ public class JfrReader {
       long cpConstantIndex = readCompressedLong(cpIs);
 
 
-      DataInputStream mdIs = new DataInputStream(new ByteArrayInputStream(chunkData, (int) metadataOffset - HEADER_SIZE_BYTES, chunkData.length - (int) metadataOffset));
+      DataInputStream mdIs = new DataInputStream(new ByteArrayInputStream(chunkData, (int) metadataOffset - HEADER_SIZE_BYTES, chunkData.length - ((int) metadataOffset - HEADER_SIZE_BYTES)));
       long mdSize = readCompressedLong(mdIs);
       long mdEventType = readCompressedLong(mdIs);
       long mdEventStart = readCompressedLong(mdIs);

@@ -14,6 +14,7 @@ public class InfluxMain {
     Path recording = Paths.get(args[0]);
     JfrEventProcessor reader = JfrEventProcessor.forRecording(recording);
     System.out.println("Loaded recording: " + recording);
+    System.exit(0);
 
     try (InfluxDB influxDb = InfluxDBFactory.connect("http://localhost:8086", "jfr", "jfr")) {
       influxDb.setDatabase("jfr");

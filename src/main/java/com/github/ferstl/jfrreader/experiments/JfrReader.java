@@ -166,6 +166,9 @@ public class JfrReader {
       switch (superType) {
         case "java.lang.annotation.Annotation":
           processAnnotation(node);
+          break;
+        case "jdk.jfr.Event":
+          processEvent(node);
       }
     }
 
@@ -181,6 +184,22 @@ public class JfrReader {
             break;
           case "field":
             annotation.fields.add(createField(child));
+        }
+      }
+    }
+
+    private void processEvent(Node node) {
+      String id = node.attributes.get("id");
+      Event event = this.events.computeIfAbsent(id, key -> new Event(Integer.parseInt(id)));
+      event.name = node.attributes.get("name");
+
+      for (Node child : node.children) {
+        switch (child.name) {
+          case "field":
+            event.fields.add(createField(child));
+            break;
+          case "setting":
+            // TODO
         }
       }
     }

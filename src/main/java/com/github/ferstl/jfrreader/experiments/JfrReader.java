@@ -8,6 +8,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardOpenOption.READ;
@@ -100,7 +106,9 @@ public class JfrReader {
       }
 
 
-      readElement(mdIs, strings, 0);
+      Node root = readElement(mdIs, strings, 0);
+      MetaDataVisitor metaDataVisitor = new MetaDataVisitor();
+      root.accept(metaDataVisitor);
 
       System.out.println("Metadata Size: " + mdSize);
 
@@ -108,21 +116,25 @@ public class JfrReader {
     }
   }
 
-  private static void readElement(DataInputStream mdIs, String[] strings, int level) throws IOException {
+  private static Node readElement(DataInputStream mdIs, String[] strings, int level) throws IOException {
+    Node node = new Node();
     int nameIndex = (int) readCompressedLong(mdIs);
-    String elementName = strings[nameIndex];
-    System.out.println(" ".repeat(level * 2) + elementName);
+    node.name = strings[nameIndex];
+    System.out.println(" ".repeat(level * 2) + node.name);
     int attributeCount = (int) readCompressedLong(mdIs);
     for (int i = 0; i < attributeCount; i++) {
       int keyIndex = (int) readCompressedLong(mdIs);
       int valueIndex = (int) readCompressedLong(mdIs);
+      node.attributes.put(strings[keyIndex], strings[valueIndex]);
       System.out.println(" ".repeat(level * 2 + 2) + strings[keyIndex] + " = " + strings[valueIndex]);
     }
 
     int childElementCount = (int) readCompressedLong(mdIs);
     for (int i = 0; i < childElementCount; i++) {
-      readElement(mdIs, strings, level + 1);
+      node.children.add(readElement(mdIs, strings, level + 1));
     }
+
+    return node;
   }
 
   private static long readCompressedLong(DataInputStream is) throws IOException {
@@ -135,5 +147,178 @@ public class JfrReader {
       }
     }
     return ret + ((is.readByte() & 0xFFL) << 56);
+  }
+
+  static class MetaDataVisitor implements NodeVisitor {
+
+    Map<String, Event> events = new HashMap<>();
+    Map<String, AnnotationMetadata> annotations = new HashMap<>();
+    Map<String, ClassMetadata> classes = new HashMap<>();
+    Map<String, Setting> settings = new HashMap<>();
+
+    @Override
+    public void visit(Node node) {
+      if (!"class".equals(node.name)) {
+        return;
+      }
+
+      String superType = node.attributes.getOrDefault("superType", "n/a");
+      switch (superType) {
+        case "java.lang.annotation.Annotation":
+          processAnnotation(node);
+      }
+    }
+
+    private void processAnnotation(Node node) {
+      String id = node.attributes.get("id");
+      AnnotationMetadata annotation = this.annotations.computeIfAbsent(id, key -> new AnnotationMetadata(Integer.parseInt(key)));
+      annotation.name = node.attributes.get("name");
+
+      for (Node child : node.children) {
+        switch (child.name) {
+          case "annotation":
+            annotation.annotations.add(createAnnotationValue(child));
+            break;
+          case "field":
+            annotation.fields.add(createField(child));
+        }
+      }
+    }
+
+    private AnnotationValue createAnnotationValue(Node child) {
+      AnnotationValue value = new AnnotationValue();
+      String annotationTypeId = child.attributes.get("class");
+
+      value.metadata = this.annotations.computeIfAbsent(annotationTypeId, key -> new AnnotationMetadata(Integer.parseInt(key)));
+      for (Entry<String, String> entry : child.attributes.entrySet()) {
+        String attributeName = entry.getKey();
+        String attributeValue = entry.getValue();
+
+        if ("class".equals(attributeName)) {
+          continue;
+        }
+
+        if (attributeValue.contains("-")) {
+          value.addValue(attributeName, attributeValue.substring(0, attributeValue.lastIndexOf('-')));
+        }
+      }
+
+      return value;
+    }
+
+    private FieldMetadata createField(Node child) {
+      String name = child.attributes.get("name");
+      String typeIdStr = child.attributes.get("class");
+
+      int typeId = Integer.parseInt(typeIdStr);
+      FieldMetadata field = new FieldMetadata(typeId);
+
+      field.type = this.classes.computeIfAbsent(typeIdStr, key -> new ClassMetadata(typeId));
+      field.name = name;
+      field.constantPool = Boolean.parseBoolean(child.attributes.getOrDefault("constantPool", "false"));
+
+      return field;
+    }
+  }
+
+  static class Node {
+
+    String name;
+    Map<String, String> attributes = new HashMap<>();
+    List<Node> children = new ArrayList<>();
+
+    void accept(NodeVisitor visitor) {
+      visitor.visit(this);
+      for (Node child : this.children) {
+        child.accept(visitor);
+      }
+    }
+  }
+
+  static interface NodeVisitor {
+
+    void visit(Node node);
+  }
+
+  static class BasicMetadata {
+
+    // * includes all primitive types * //
+    // !!! Field has no ID !!! //
+    final int id;
+    String name;
+
+    public BasicMetadata(int id) {
+      this.id = id;
+    }
+
+  }
+
+  static class AnnotatedMetadata extends BasicMetadata {
+
+    List<AnnotationValue> annotations = new ArrayList<>();
+
+    public AnnotatedMetadata(int id) {
+      super(id);
+    }
+
+  }
+
+  static class ClassMetadata extends AnnotatedMetadata {
+
+    List<FieldMetadata> fields = new ArrayList<>();
+
+    public ClassMetadata(int id) {
+      super(id);
+    }
+  }
+
+  static class Event extends ClassMetadata {
+
+    public Event(int id) {
+      super(id);
+    }
+    // Setting(s)
+  }
+
+  static class Setting extends BasicMetadata {
+
+    public Setting(int id) {
+      super(id);
+    }
+    // name
+    // defaultvalue
+  }
+
+  static class AnnotationMetadata extends AnnotatedMetadata {
+
+    public List<FieldMetadata> fields = new ArrayList<>();
+
+    public AnnotationMetadata(int id) {
+      super(id);
+    }
+  }
+
+  static class AnnotationValue {
+
+    AnnotationMetadata metadata;
+    Map<String, List<String>> values = new LinkedHashMap<>();
+
+    void addValue(String attributeName, String value) {
+      List<String> values = this.values.computeIfAbsent(attributeName, key -> new ArrayList<>());
+      values.add(value);
+    }
+    // AnnotationType
+    // SimpleType
+    // value(s) -> based on Dimension
+  }
+
+  static class FieldMetadata extends AnnotatedMetadata {
+
+    ClassMetadata type;
+    boolean constantPool;
+
+    public FieldMetadata(int id) {
+      super(id);
+    }
   }
 }

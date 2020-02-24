@@ -154,7 +154,7 @@ public class JfrReader {
     Map<String, Event> events = new HashMap<>();
     Map<String, AnnotationMetadata> annotations = new HashMap<>();
     Map<String, ClassMetadata> classes = new HashMap<>();
-    Map<String, Setting> settings = new HashMap<>();
+    Map<String, SettingMetadata> settings = new HashMap<>();
 
     @Override
     public void visit(Node node) {
@@ -169,6 +169,9 @@ public class JfrReader {
           break;
         case "jdk.jfr.Event":
           processEvent(node);
+          break;
+        case "jdk.jfr.SettingControl":
+          processSetting(node);
       }
     }
 
@@ -199,9 +202,43 @@ public class JfrReader {
             event.fields.add(createField(child));
             break;
           case "setting":
-            // TODO
+            event.settings.add(crateSettingValue(child));
         }
       }
+    }
+
+    private void processSetting(Node node) {
+      String id = node.attributes.get("id");
+      SettingMetadata settingMetadata = this.settings.computeIfAbsent(id, key -> new SettingMetadata(Integer.parseInt(id)));
+      settingMetadata.name = node.attributes.get("name");
+
+      for (Node child : node.children) {
+        if ("annotation".equals(child.name)) {
+          createAnnotationValue(child);
+        }
+      }
+    }
+
+    private SettingValue crateSettingValue(Node child) {
+      SettingValue value = new SettingValue();
+      String metadataId = child.attributes.get("class");
+
+      value.metadata = this.settings.computeIfAbsent(metadataId, key -> new SettingMetadata(Integer.parseInt(key)));
+      for (Entry<String, String> entry : child.attributes.entrySet()) {
+        String attributeName = entry.getKey();
+        String attributeValue = entry.getValue();
+
+        switch (attributeName) {
+          case "name":
+            value.name = attributeValue;
+            break;
+          case "defaultValue":
+            value.defaultValue = attributeValue;
+            break;
+        }
+      }
+
+      return value;
     }
 
     private AnnotationValue createAnnotationValue(Node child) {
@@ -293,19 +330,27 @@ public class JfrReader {
 
   static class Event extends ClassMetadata {
 
+    List<SettingValue> settings = new ArrayList<>();
+
     public Event(int id) {
       super(id);
     }
     // Setting(s)
   }
 
-  static class Setting extends BasicMetadata {
+  static class SettingMetadata extends AnnotatedMetadata {
 
-    public Setting(int id) {
+    public SettingMetadata(int id) {
       super(id);
     }
-    // name
-    // defaultvalue
+  }
+
+  static class SettingValue {
+
+    SettingMetadata metadata;
+    String name;
+    String defaultValue;
+
   }
 
   static class AnnotationMetadata extends AnnotatedMetadata {

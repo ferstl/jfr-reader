@@ -172,6 +172,9 @@ public class JfrReader {
           break;
         case "jdk.jfr.SettingControl":
           processSetting(node);
+          break;
+        default:
+          processClass(node);
       }
     }
 
@@ -214,7 +217,25 @@ public class JfrReader {
 
       for (Node child : node.children) {
         if ("annotation".equals(child.name)) {
-          createAnnotationValue(child);
+          settingMetadata.annotations.add(createAnnotationValue(child));
+        }
+      }
+    }
+
+    private void processClass(Node node) {
+      String id = node.attributes.get("id");
+      ClassMetadata classMetadata = this.classes.computeIfAbsent(id, key -> new ClassMetadata(Integer.parseInt(id)));
+      classMetadata.name = node.attributes.get("name");
+      classMetadata.simpleType = Boolean.parseBoolean(node.attributes.getOrDefault("simpleType", "false"));
+
+      for (Node child : node.children) {
+        switch (child.name) {
+          case "annotation":
+            classMetadata.annotations.add(createAnnotationValue(child));
+            break;
+          case "field":
+            classMetadata.fields.add(createField(child));
+            break;
         }
       }
     }
@@ -321,6 +342,7 @@ public class JfrReader {
 
   static class ClassMetadata extends AnnotatedMetadata {
 
+    boolean simpleType;
     List<FieldMetadata> fields = new ArrayList<>();
 
     public ClassMetadata(int id) {
@@ -335,7 +357,6 @@ public class JfrReader {
     public Event(int id) {
       super(id);
     }
-    // Setting(s)
   }
 
   static class SettingMetadata extends AnnotatedMetadata {
@@ -371,9 +392,6 @@ public class JfrReader {
       List<String> values = this.values.computeIfAbsent(attributeName, key -> new ArrayList<>());
       values.add(value);
     }
-    // AnnotationType
-    // SimpleType
-    // value(s) -> based on Dimension
   }
 
   static class FieldMetadata extends AnnotatedMetadata {

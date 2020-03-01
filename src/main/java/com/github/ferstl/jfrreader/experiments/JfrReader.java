@@ -52,19 +52,6 @@ public class JfrReader {
       System.out.println("Compressed Integers: " + ((featureFlags & 0x0001) == 1));
       System.out.println("Ticks per Nanosecond: " + ticksPerSecond / 1_000_000_000.0D);
 
-      DataInputStream cpIs = new DataInputStream(new ByteArrayInputStream(chunkData, (int) constantPoolOffset - HEADER_SIZE_BYTES, chunkData.length - (int) metadataOffset));
-      long cpSize = readCompressedLong(cpIs);
-      long cpEventType = readCompressedLong(cpIs);
-      long cpEventStart = readCompressedLong(cpIs);
-      long cpEventDuration = readCompressedLong(cpIs);
-      long cpDelta = readCompressedLong(cpIs);
-      boolean cpFlush = cpIs.readBoolean();
-
-      long cpClassId = readCompressedLong(cpIs);
-      long cpConstantCount = readCompressedLong(cpIs);
-      long cpConstantIndex = readCompressedLong(cpIs);
-
-
       DataInputStream mdIs = new DataInputStream(new ByteArrayInputStream(chunkData, (int) metadataOffset - HEADER_SIZE_BYTES, chunkData.length - ((int) metadataOffset - HEADER_SIZE_BYTES)));
       long mdSize = readCompressedLong(mdIs);
       long mdEventType = readCompressedLong(mdIs);
@@ -111,6 +98,26 @@ public class JfrReader {
       root.accept(metaDataVisitor);
 
       System.out.println("Metadata Size: " + mdSize);
+
+      // Constant Pool
+      DataInputStream cpIs = new DataInputStream(new ByteArrayInputStream(chunkData, (int) constantPoolOffset - HEADER_SIZE_BYTES, chunkData.length - (int) metadataOffset));
+      long cpSize = readCompressedLong(cpIs);
+      long cpEventType = readCompressedLong(cpIs);
+      long cpEventStart = readCompressedLong(cpIs);
+      long cpEventDuration = readCompressedLong(cpIs);
+      long cpDelta = readCompressedLong(cpIs);
+      boolean cpFlush = cpIs.readBoolean();
+
+      int poolCount = (int) readCompressedLong(cpIs);
+
+      for (int i = 0; i < poolCount; i++) {
+        long cpClassId = readCompressedLong(cpIs);
+        long cpConstantCount = readCompressedLong(cpIs);
+        //long cpConstantIndex = readCompressedLong(cpIs);
+        System.out.println(cpConstantCount);
+
+      }
+
 
       System.out.println("test");
     }

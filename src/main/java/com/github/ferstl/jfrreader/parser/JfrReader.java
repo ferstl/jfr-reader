@@ -1,4 +1,4 @@
-package com.github.ferstl.jfrreader.experiments;
+package com.github.ferstl.jfrreader.parser;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;

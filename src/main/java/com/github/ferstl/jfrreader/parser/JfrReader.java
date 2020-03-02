@@ -58,34 +58,7 @@ public class JfrReader {
 
       String[] strings = new String[stringCount];
       for (int i = 0; i < stringCount; i++) {
-        byte encoding = mdIs.readByte();
-        int length;
-        switch (encoding) {
-          case 0:
-            strings[i] = null;
-            break;
-          case 1:
-            strings[i] = "";
-            break;
-          case 3:
-            length = (int) readCompressedLong(mdIs);
-            strings[i] = new String(mdIs.readNBytes(length), UTF_8);
-            break;
-          case 4:
-            length = (int) readCompressedLong(mdIs);
-            char[] chars = new char[length];
-            for (int j = 0; j < length; j++) {
-              chars[j] = (char) readCompressedLong(mdIs);
-            }
-            strings[i] = new String(chars);
-            break;
-          case 5:
-            length = (int) readCompressedLong(mdIs);
-            strings[i] = new String(mdIs.readNBytes(length), ISO_8859_1);
-            break;
-          default:
-            throw new IllegalArgumentException("Unknown String encoding at position " + i + ": " + encoding);
-        }
+        strings[i] = readString(mdIs);
       }
 
 
@@ -116,6 +89,32 @@ public class JfrReader {
 
 
       System.out.println("test");
+    }
+  }
+
+  private static String readString(DataInputStream mdIs) throws IOException {
+    byte encoding = mdIs.readByte();
+    int length;
+    switch (encoding) {
+      case 0:
+        return null;
+      case 1:
+        return "";
+      case 3:
+        length = (int) readCompressedLong(mdIs);
+        return new String(mdIs.readNBytes(length), UTF_8);
+      case 4:
+        length = (int) readCompressedLong(mdIs);
+        char[] chars = new char[length];
+        for (int j = 0; j < length; j++) {
+          chars[j] = (char) readCompressedLong(mdIs);
+        }
+        return new String(chars);
+      case 5:
+        length = (int) readCompressedLong(mdIs);
+        return new String(mdIs.readNBytes(length), ISO_8859_1);
+      default:
+        throw new IllegalArgumentException("Unknown String encoding : " + encoding);
     }
   }
 

@@ -6,10 +6,10 @@ import java.util.Map.Entry;
 
 public class ClassMetadataVisitor implements MetadataNodeVisitor {
 
-  Map<String, EventMetadata> events = new HashMap<>();
-  Map<String, AnnotationMetadata> annotations = new HashMap<>();
-  Map<String, ClassMetadata> classes = new HashMap<>();
-  Map<String, SettingMetadata> settings = new HashMap<>();
+  public Map<String, EventMetadata> events = new HashMap<>();
+  public Map<String, AnnotationMetadata> annotations = new HashMap<>();
+  public Map<String, ClassMetadata> classes = new HashMap<>();
+  public Map<String, SettingMetadata> settings = new HashMap<>();
 
   @Override
   public void visit(MetadataNode metadataNode) {
@@ -132,6 +132,8 @@ public class ClassMetadataVisitor implements MetadataNodeVisitor {
 
       if (attributeValue.contains("-")) {
         value.addValue(attributeName, attributeValue.substring(0, attributeValue.lastIndexOf('-')));
+      } else {
+        value.addValue(attributeName, attributeValue);
       }
     }
 

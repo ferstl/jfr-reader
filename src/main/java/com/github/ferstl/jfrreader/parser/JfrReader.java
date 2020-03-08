@@ -8,7 +8,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
+import com.github.ferstl.jfrreader.parser.metadata.ClassMetadata;
 import com.github.ferstl.jfrreader.parser.metadata.ClassMetadataVisitor;
+import com.github.ferstl.jfrreader.parser.metadata.FieldMetadata;
 import com.github.ferstl.jfrreader.parser.metadata.MetadataNode;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -81,7 +84,18 @@ public class JfrReader {
 
       for (int i = 0; i < poolCount; i++) {
         long cpClassId = readCompressedLong(cpIs);
+        ClassMetadata classMetadata = classMetaDataVisitor.classes.get("" + cpClassId);
         long cpConstantCount = readCompressedLong(cpIs);
+        for (int j = 0; j < cpConstantCount; j++) {
+          long constantIndex = readCompressedLong(cpIs);
+
+        }
+
+        for (FieldMetadata field : classMetadata.fields) {
+          readField(field, cpIs, classMetaDataVisitor.classes);
+        }
+
+
         //long cpConstantIndex = readCompressedLong(cpIs);
         System.out.println(cpConstantCount);
 
@@ -115,6 +129,44 @@ public class JfrReader {
         return new String(mdIs.readNBytes(length), ISO_8859_1);
       default:
         throw new IllegalArgumentException("Unknown String encoding : " + encoding);
+    }
+  }
+
+  private static void readField(FieldMetadata field, DataInputStream is, Map<String, ClassMetadata> classes) throws IOException {
+    ClassMetadata classMetadata = classes.get("" + field.type.id);
+    if (classMetadata.fields.size() > 0) {
+      for (FieldMetadata innerField : classMetadata.fields) {
+        readField(innerField, is, classes);
+      }
+    } else {
+      switch (classMetadata.name) {
+        case "boolean":
+          System.out.println(is.readBoolean());
+          break;
+        case "char":
+          System.out.println(is.readChar());
+          break;
+        case "float":
+          System.out.println(is.readFloat());
+          break;
+        case "double":
+          System.out.println(is.readDouble());
+          break;
+        case "byte":
+          System.out.println(is.readByte());
+          break;
+        case "short":
+        case "int":
+        case "long":
+          System.out.println(readCompressedLong(is));
+          break;
+        case "java.lang.String":
+          System.out.println(readString(is));
+          break;
+        default:
+          throw new IllegalStateException("Unknown primitive: " + classMetadata.name);
+
+      }
     }
   }
 

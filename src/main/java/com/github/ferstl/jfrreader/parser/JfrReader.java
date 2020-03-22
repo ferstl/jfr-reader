@@ -2,6 +2,7 @@ package com.github.ferstl.jfrreader.parser;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +12,7 @@ import java.time.Instant;
 import java.util.Map;
 import com.github.ferstl.jfrreader.parser.metadata.ClassMetadata;
 import com.github.ferstl.jfrreader.parser.metadata.ClassMetadataVisitor;
+import com.github.ferstl.jfrreader.parser.metadata.EventMetadata;
 import com.github.ferstl.jfrreader.parser.metadata.FieldMetadata;
 import com.github.ferstl.jfrreader.parser.metadata.MetadataNode;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
@@ -96,17 +98,40 @@ public class JfrReader {
             for (FieldMetadata field : classMetadata.fields) {
               readField(field, cpIs, classMetaDataVisitor.classes);
             }
-            System.out.println("------ " + j);
           }
 
 
           //long cpConstantIndex = readCompressedLong(cpIs);
-          System.out.println(cpConstantCount);
+          //System.out.println(cpConstantCount);
 
         }
       }
 
 
+      // Body
+      DataInputStream bodyIs = new DataInputStream(new ByteArrayInputStream(chunkData, 0, chunkData.length));
+      while (true) {
+        long size;
+        try {
+          size = readCompressedLong(bodyIs);
+        } catch (EOFException e) {
+          // at the moment we don't know, when we are at the end of the stream
+          System.out.println("end of chunk reached");
+          break;
+        }
+        long eventType = readCompressedLong(bodyIs);
+
+        if (eventType == 0 || eventType == 1) {
+          System.out.println("end of event section " + eventType);
+          bodyIs.skipBytes((int) (size - 5)); // size field is padded to 4 bytes + 1 byte for event type
+          continue;
+        }
+
+        EventMetadata eventMetadata = classMetaDataVisitor.events.get("" + eventType);
+        for (FieldMetadata field : eventMetadata.fields) {
+          readField(field, bodyIs, classMetaDataVisitor.classes);
+        }
+      }
       System.out.println("test");
     }
   }
@@ -139,7 +164,7 @@ public class JfrReader {
 
   private static void readField(FieldMetadata field, DataInputStream is, Map<String, ClassMetadata> classes) throws IOException {
     if (field.constantPool) {
-      System.out.println("ref: " + readCompressedLong(is));
+      readCompressedLong(is);
     } else {
       ClassMetadata classMetadata = classes.get("" + field.type.id);
       if (classMetadata.fields.size() > 0) {
@@ -149,27 +174,27 @@ public class JfrReader {
       } else {
         switch (classMetadata.name) {
           case "boolean":
-            System.out.println(is.readBoolean());
+            is.readBoolean();
             break;
           case "char":
-            System.out.println(is.readChar());
+            is.readChar();
             break;
           case "float":
-            System.out.println(is.readFloat());
+            is.readFloat();
             break;
           case "double":
-            System.out.println(is.readDouble());
+            is.readDouble();
             break;
           case "byte":
-            System.out.println(is.readByte());
+            is.readByte();
             break;
           case "short":
           case "int":
           case "long":
-            System.out.println(readCompressedLong(is));
+            readCompressedLong(is);
             break;
           case "java.lang.String":
-            System.out.println(readString(is));
+            readString(is);
             break;
           default:
             throw new IllegalStateException("Unknown primitive: " + classMetadata.name);

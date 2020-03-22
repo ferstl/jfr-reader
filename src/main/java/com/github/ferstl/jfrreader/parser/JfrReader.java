@@ -33,7 +33,7 @@ public class JfrReader {
       int majorVersion = dis.readUnsignedShort();
       int minorVersion = dis.readUnsignedShort();
       long chunkSize = dis.readLong();
-      long constantPoolOffset = dis.readLong();
+      long lastConstantPoolOffset = dis.readLong();
       long metadataOffset = dis.readLong();
       long startTimeNanos = dis.readLong();
       long durationNanos = dis.readLong();
@@ -71,34 +71,39 @@ public class JfrReader {
 
       System.out.println("Metadata Size: " + mdSize);
 
-      // Constant Pool
-      DataInputStream cpIs = new DataInputStream(new ByteArrayInputStream(chunkData, (int) constantPoolOffset - HEADER_SIZE_BYTES, chunkData.length - (int) metadataOffset));
-      long cpSize = readCompressedLong(cpIs);
-      long cpEventType = readCompressedLong(cpIs);
-      long cpEventStart = readCompressedLong(cpIs);
-      long cpEventDuration = readCompressedLong(cpIs);
-      long cpDelta = readCompressedLong(cpIs);
-      boolean cpFlush = cpIs.readBoolean();
+      long currentConstantPoolOffset = 0;
+      long previousConstantPoolOffset = lastConstantPoolOffset;
+      while (previousConstantPoolOffset != 0) {
+        currentConstantPoolOffset += previousConstantPoolOffset;
 
-      int poolCount = (int) readCompressedLong(cpIs);
+        // Constant Pool
+        DataInputStream cpIs = new DataInputStream(new ByteArrayInputStream(chunkData, (int) currentConstantPoolOffset - HEADER_SIZE_BYTES, (int) (metadataOffset - currentConstantPoolOffset)));
+        long cpSize = readCompressedLong(cpIs);
+        long cpEventType = readCompressedLong(cpIs);
+        long cpEventStart = readCompressedLong(cpIs);
+        long cpEventDuration = readCompressedLong(cpIs);
+        previousConstantPoolOffset = readCompressedLong(cpIs);
+        boolean cpFlush = cpIs.readBoolean();
 
-      for (int i = 0; i < poolCount; i++) {
-        long cpClassId = readCompressedLong(cpIs);
-        ClassMetadata classMetadata = classMetaDataVisitor.classes.get("" + cpClassId);
-        long cpConstantCount = readCompressedLong(cpIs);
-        for (int j = 0; j < cpConstantCount; j++) {
-          long constantIndex = readCompressedLong(cpIs);
+        int poolCount = (int) readCompressedLong(cpIs);
+
+        for (int i = 0; i < poolCount; i++) {
+          long cpClassId = readCompressedLong(cpIs);
+          ClassMetadata classMetadata = classMetaDataVisitor.classes.get("" + cpClassId);
+          long cpConstantCount = readCompressedLong(cpIs);
+          for (int j = 0; j < cpConstantCount; j++) {
+            long constantIndex = readCompressedLong(cpIs);
+            for (FieldMetadata field : classMetadata.fields) {
+              readField(field, cpIs, classMetaDataVisitor.classes);
+            }
+            System.out.println("------ " + j);
+          }
+
+
+          //long cpConstantIndex = readCompressedLong(cpIs);
+          System.out.println(cpConstantCount);
 
         }
-
-        for (FieldMetadata field : classMetadata.fields) {
-          readField(field, cpIs, classMetaDataVisitor.classes);
-        }
-
-
-        //long cpConstantIndex = readCompressedLong(cpIs);
-        System.out.println(cpConstantCount);
-
       }
 
 
@@ -133,39 +138,43 @@ public class JfrReader {
   }
 
   private static void readField(FieldMetadata field, DataInputStream is, Map<String, ClassMetadata> classes) throws IOException {
-    ClassMetadata classMetadata = classes.get("" + field.type.id);
-    if (classMetadata.fields.size() > 0) {
-      for (FieldMetadata innerField : classMetadata.fields) {
-        readField(innerField, is, classes);
-      }
+    if (field.constantPool) {
+      System.out.println("ref: " + readCompressedLong(is));
     } else {
-      switch (classMetadata.name) {
-        case "boolean":
-          System.out.println(is.readBoolean());
-          break;
-        case "char":
-          System.out.println(is.readChar());
-          break;
-        case "float":
-          System.out.println(is.readFloat());
-          break;
-        case "double":
-          System.out.println(is.readDouble());
-          break;
-        case "byte":
-          System.out.println(is.readByte());
-          break;
-        case "short":
-        case "int":
-        case "long":
-          System.out.println(readCompressedLong(is));
-          break;
-        case "java.lang.String":
-          System.out.println(readString(is));
-          break;
-        default:
-          throw new IllegalStateException("Unknown primitive: " + classMetadata.name);
+      ClassMetadata classMetadata = classes.get("" + field.type.id);
+      if (classMetadata.fields.size() > 0) {
+        for (FieldMetadata innerField : classMetadata.fields) {
+          readField(innerField, is, classes);
+        }
+      } else {
+        switch (classMetadata.name) {
+          case "boolean":
+            System.out.println(is.readBoolean());
+            break;
+          case "char":
+            System.out.println(is.readChar());
+            break;
+          case "float":
+            System.out.println(is.readFloat());
+            break;
+          case "double":
+            System.out.println(is.readDouble());
+            break;
+          case "byte":
+            System.out.println(is.readByte());
+            break;
+          case "short":
+          case "int":
+          case "long":
+            System.out.println(readCompressedLong(is));
+            break;
+          case "java.lang.String":
+            System.out.println(readString(is));
+            break;
+          default:
+            throw new IllegalStateException("Unknown primitive: " + classMetadata.name);
 
+        }
       }
     }
   }

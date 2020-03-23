@@ -57,7 +57,7 @@ public class ClassMetadataVisitor implements MetadataNodeVisitor {
     for (MetadataNode child : metadataNode.children) {
       switch (child.name) {
         case "field":
-          eventMetadata.fields.add(createField(child));
+          eventMetadata.addField(createField(child));
           break;
         case "setting":
           eventMetadata.settings.add(crateSettingValue(child));
@@ -89,7 +89,7 @@ public class ClassMetadataVisitor implements MetadataNodeVisitor {
           classMetadata.annotations.add(createAnnotationValue(child));
           break;
         case "field":
-          classMetadata.fields.add(createField(child));
+          classMetadata.addField(createField(child));
           break;
       }
     }

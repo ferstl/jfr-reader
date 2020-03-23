@@ -8,6 +8,7 @@ import java.util.Map;
 public class AnnotationValue {
 
   public AnnotationMetadata metadata;
+  // TODO Use ClassInstance? Or introduce AnnotationInstance?
   public Map<String, List<String>> values = new LinkedHashMap<>();
 
   public void addValue(String attributeName, String value) {

@@ -9,6 +9,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import com.github.ferstl.jfrreader.parser.metadata.ClassInstance;
 import com.github.ferstl.jfrreader.parser.metadata.ClassMetadata;
@@ -112,6 +114,8 @@ public class JfrReader {
 
       // Body
       DataInputStream bodyIs = new DataInputStream(new ByteArrayInputStream(chunkData, 0, chunkData.length));
+      // TODO We need an EventInstance
+      List<ClassInstance> events = new ArrayList<>();
       while (true) {
         long size;
         try {
@@ -130,9 +134,11 @@ public class JfrReader {
         }
 
         EventMetadata eventMetadata = classMetaDataVisitor.events.get("" + eventType);
+        ClassInstance event = new ClassInstance(eventMetadata);
         for (FieldMetadata field : eventMetadata.getFields()) {
-          readField(field, bodyIs, classMetaDataVisitor.classes);
+          event.addField(field.name, readField(field, bodyIs, classMetaDataVisitor.classes));
         }
+        events.add(event);
       }
       System.out.println("test");
     }

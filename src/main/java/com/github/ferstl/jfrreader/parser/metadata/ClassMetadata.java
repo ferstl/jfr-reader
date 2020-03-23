@@ -7,6 +7,8 @@ import java.util.Map;
 
 public class ClassMetadata extends AnnotatedMetadata {
 
+  // TODO Probably not the right place for constants. They can be eliminated after reading data.
+  public Map<Long, ClassInstance> constants = new HashMap<>();
   public boolean simpleType;
   private final Map<String, FieldMetadata> fields = new LinkedHashMap<>();
 

@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import com.github.ferstl.jfrreader.parser.metadata.ClassInstance;
 import com.github.ferstl.jfrreader.parser.metadata.ClassMetadata;
 import com.github.ferstl.jfrreader.parser.metadata.ClassMetadataVisitor;
 import com.github.ferstl.jfrreader.parser.metadata.EventMetadata;
@@ -95,8 +96,9 @@ public class JfrReader {
           long cpConstantCount = readCompressedLong(cpIs);
           for (int j = 0; j < cpConstantCount; j++) {
             long constantIndex = readCompressedLong(cpIs);
-            for (FieldMetadata field : classMetadata.fields) {
-              readField(field, cpIs, classMetaDataVisitor.classes);
+            ClassInstance classInstance = classMetadata.constants.computeIfAbsent(constantIndex, key -> new ClassInstance(classMetadata));
+            for (FieldMetadata field : classMetadata.getFields()) {
+              classInstance.addField(field.name, readField(field, cpIs, classMetaDataVisitor.classes));
             }
           }
 
@@ -128,7 +130,7 @@ public class JfrReader {
         }
 
         EventMetadata eventMetadata = classMetaDataVisitor.events.get("" + eventType);
-        for (FieldMetadata field : eventMetadata.fields) {
+        for (FieldMetadata field : eventMetadata.getFields()) {
           readField(field, bodyIs, classMetaDataVisitor.classes);
         }
       }
@@ -162,44 +164,49 @@ public class JfrReader {
     }
   }
 
-  private static void readField(FieldMetadata field, DataInputStream is, Map<String, ClassMetadata> classes) throws IOException {
+  private static ClassInstance readField(FieldMetadata field, DataInputStream is, Map<String, ClassMetadata> classes) throws IOException {
+    ClassMetadata classMetadata = classes.get("" + field.type.id);
     if (field.constantPool) {
-      readCompressedLong(is);
+      long constantPoolIndex = readCompressedLong(is);
+      return classMetadata.constants.computeIfAbsent(constantPoolIndex, key -> new ClassInstance(classMetadata));
     } else {
-      ClassMetadata classMetadata = classes.get("" + field.type.id);
-      if (classMetadata.fields.size() > 0) {
-        for (FieldMetadata innerField : classMetadata.fields) {
-          readField(innerField, is, classes);
+      if (classMetadata.getFields().size() > 0) {
+        // Instance of the field
+        ClassInstance classInstance = new ClassInstance(classMetadata);
+        for (FieldMetadata innerField : classMetadata.getFields()) {
+          classInstance.addField(innerField.name, readField(innerField, is, classes));
         }
+        return classInstance;
       } else {
+        ClassInstance classInstance = new ClassInstance(classMetadata);
         switch (classMetadata.name) {
           case "boolean":
-            is.readBoolean();
+            classInstance.value = is.readBoolean();
             break;
           case "char":
-            is.readChar();
+            classInstance.value = is.readChar();
             break;
           case "float":
-            is.readFloat();
+            classInstance.value = is.readFloat();
             break;
           case "double":
-            is.readDouble();
+            classInstance.value = is.readDouble();
             break;
           case "byte":
-            is.readByte();
+            classInstance.value = is.readByte();
             break;
           case "short":
           case "int":
           case "long":
-            readCompressedLong(is);
+            classInstance.value = readCompressedLong(is);
             break;
           case "java.lang.String":
-            readString(is);
+            classInstance.value = readString(is);
             break;
           default:
             throw new IllegalStateException("Unknown primitive: " + classMetadata.name);
-
         }
+        return classInstance;
       }
     }
   }

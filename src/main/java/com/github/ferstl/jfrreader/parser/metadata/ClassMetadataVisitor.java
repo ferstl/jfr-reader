@@ -143,9 +143,11 @@ public class ClassMetadataVisitor implements MetadataNodeVisitor {
   private FieldMetadata createField(MetadataNode child) {
     String name = child.attributes.get("name");
     String typeIdStr = child.attributes.get("class");
+    String dimensionStr = child.attributes.get("dimension");
 
     int typeId = Integer.parseInt(typeIdStr);
-    FieldMetadata field = new FieldMetadata(typeId);
+    int dimension = dimensionStr != null ? Integer.parseInt(dimensionStr) : 0;
+    FieldMetadata field = new FieldMetadata(typeId, dimension);
 
     field.type = this.classes.computeIfAbsent(typeIdStr, key -> new ClassMetadata(typeId));
     field.name = name;

@@ -60,7 +60,7 @@ public class ClassMetadataVisitor implements MetadataNodeVisitor {
           eventMetadata.addField(createField(child));
           break;
         case "setting":
-          eventMetadata.settings.add(crateSettingValue(child));
+          eventMetadata.settings.add(createSettingValue(child));
       }
     }
   }
@@ -95,7 +95,7 @@ public class ClassMetadataVisitor implements MetadataNodeVisitor {
     }
   }
 
-  private SettingValue crateSettingValue(MetadataNode child) {
+  private SettingValue createSettingValue(MetadataNode child) {
     SettingValue value = new SettingValue();
     String metadataId = child.attributes.get("class");
 

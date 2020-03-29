@@ -1,6 +1,6 @@
 package com.github.ferstl.jfrreader.parser.metadata;
 
-public class BasicMetadata {
+public abstract class BasicMetadata {
 
   // * includes all primitive types * //
   // !!! Field has no ID !!! //

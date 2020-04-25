@@ -13,8 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import com.github.ferstl.jfrreader.parser.metadata.ClassInstance;
+import com.github.ferstl.jfrreader.parser.metadata.ClassInstance.ClassInstanceBuilder;
 import com.github.ferstl.jfrreader.parser.metadata.ClassMetadata;
 import com.github.ferstl.jfrreader.parser.metadata.ClassMetadataVisitor;
+import com.github.ferstl.jfrreader.parser.metadata.ConstantPool;
 import com.github.ferstl.jfrreader.parser.metadata.EventMetadata;
 import com.github.ferstl.jfrreader.parser.metadata.FieldMetadata;
 import com.github.ferstl.jfrreader.parser.metadata.MetadataNode;
@@ -73,9 +75,11 @@ public class JfrReader {
       MetadataNode root = readMetadata(mdIs, strings, 0);
       ClassMetadataVisitor classMetaDataVisitor = new ClassMetadataVisitor();
       root.accept(classMetaDataVisitor);
+      classMetaDataVisitor.process();
 
       System.out.println("Metadata Size: " + mdSize);
 
+      ConstantPool constantPool = new ConstantPool();
       long currentConstantPoolOffset = 0;
       long previousConstantPoolOffset = lastConstantPoolOffset;
       while (previousConstantPoolOffset != 0) {
@@ -91,23 +95,17 @@ public class JfrReader {
         boolean cpFlush = cpIs.readBoolean();
 
         int poolCount = (int) readCompressedLong(cpIs);
-
         for (int i = 0; i < poolCount; i++) {
           long cpClassId = readCompressedLong(cpIs);
-          ClassMetadata classMetadata = classMetaDataVisitor.classes.get("" + cpClassId);
+          ClassMetadata classMetadata = classMetaDataVisitor.getClasses().get("" + cpClassId);
           long cpConstantCount = readCompressedLong(cpIs);
           for (int j = 0; j < cpConstantCount; j++) {
             long constantIndex = readCompressedLong(cpIs);
-            ClassInstance classInstance = classMetadata.constants.computeIfAbsent(constantIndex, key -> new ClassInstance(classMetadata));
+            ClassInstanceBuilder classInstance = constantPool.computeClassInstance(classMetadata.id, constantIndex, classMetadata);
             for (FieldMetadata field : classMetadata.getFields()) {
-              classInstance.addField(field.name, readField(field, cpIs, classMetaDataVisitor.classes));
+              classInstance.field(field.name, readField(field, cpIs, classMetaDataVisitor.getClasses(), constantPool));
             }
           }
-
-
-          //long cpConstantIndex = readCompressedLong(cpIs);
-          //System.out.println(cpConstantCount);
-
         }
       }
 
@@ -115,7 +113,7 @@ public class JfrReader {
       // Body
       DataInputStream bodyIs = new DataInputStream(new ByteArrayInputStream(chunkData, 0, chunkData.length));
       // TODO We need an EventInstance
-      List<ClassInstance> events = new ArrayList<>();
+      List<ClassInstanceBuilder> events = new ArrayList<>();
       while (true) {
         long size;
         try {
@@ -133,10 +131,10 @@ public class JfrReader {
           continue;
         }
 
-        EventMetadata eventMetadata = classMetaDataVisitor.events.get("" + eventType);
-        ClassInstance event = new ClassInstance(eventMetadata);
+        EventMetadata eventMetadata = classMetaDataVisitor.getEvents().get("" + eventType);
+        ClassInstanceBuilder event = ClassInstance.builder(eventMetadata);
         for (FieldMetadata field : eventMetadata.getFields()) {
-          event.addField(field.name, readField(field, bodyIs, classMetaDataVisitor.classes));
+          event.field(field.name, readField(field, bodyIs, classMetaDataVisitor.getClasses(), constantPool));
         }
         events.add(event);
       }
@@ -170,44 +168,44 @@ public class JfrReader {
     }
   }
 
-  private static ClassInstance readField(FieldMetadata field, DataInputStream is, Map<String, ClassMetadata> classes) throws IOException {
+  private static ClassInstanceBuilder readField(FieldMetadata field, DataInputStream is, Map<String, ClassMetadata> classes, ConstantPool constantPool) throws IOException {
     ClassMetadata classMetadata = classes.get("" + field.type.id);
     if (field.constantPool) {
       long constantPoolIndex = readCompressedLong(is);
-      return classMetadata.constants.computeIfAbsent(constantPoolIndex, key -> new ClassInstance(classMetadata));
+      return constantPool.computeClassInstance(classMetadata.id, constantPoolIndex, classMetadata);
     } else {
       if (classMetadata.getFields().size() > 0) {
         // Instance of the field
-        ClassInstance classInstance = new ClassInstance(classMetadata);
+        ClassInstanceBuilder classInstance = ClassInstance.builder(classMetadata);
         for (FieldMetadata innerField : classMetadata.getFields()) {
-          classInstance.addField(innerField.name, readField(innerField, is, classes));
+          classInstance.field(innerField.name, readField(innerField, is, classes, constantPool));
         }
         return classInstance;
       } else {
-        ClassInstance classInstance = new ClassInstance(classMetadata);
+        ClassInstanceBuilder classInstance = ClassInstance.builder(classMetadata);
         switch (classMetadata.name) {
           case "boolean":
-            classInstance.value = is.readBoolean();
+            classInstance.value(is.readBoolean());
             break;
           case "char":
-            classInstance.value = is.readChar();
+            classInstance.value(is.readChar());
             break;
           case "float":
-            classInstance.value = is.readFloat();
+            classInstance.value(is.readFloat());
             break;
           case "double":
-            classInstance.value = is.readDouble();
+            classInstance.value(is.readDouble());
             break;
           case "byte":
-            classInstance.value = is.readByte();
+            classInstance.value(is.readByte());
             break;
           case "short":
           case "int":
           case "long":
-            classInstance.value = readCompressedLong(is);
+            classInstance.value(readCompressedLong(is));
             break;
           case "java.lang.String":
-            classInstance.value = readString(is);
+            classInstance.value(readString(is));
             break;
           default:
             throw new IllegalStateException("Unknown primitive: " + classMetadata.name);

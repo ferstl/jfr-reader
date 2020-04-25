@@ -1,23 +1,35 @@
 package com.github.ferstl.jfrreader.parser.metadata;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import com.github.ferstl.jfrreader.parser.metadata.FieldMetadata.FieldMetadataBuilder;
 
 public class ClassMetadata extends AnnotatedMetadata {
 
-  // TODO Probably not the right place for constants. They can be eliminated after reading data.
-  public Map<Long, ClassInstance> constants = new HashMap<>();
-  public boolean simpleType;
-  private final Map<String, FieldMetadata> fields = new LinkedHashMap<>();
+  private final boolean simpleType;
+  private final Map<String, FieldMetadata> fields;
 
-  public ClassMetadata(int id) {
-    super(id);
+  ClassMetadata(ClassMetadataBuilder builder) {
+    super(builder);
+    this.simpleType = builder.simpleType;
+
+    // Set this instance on the builder in order to handle circular references
+    builder.instance = this;
+
+    Map<String, FieldMetadata> fieldMap = new LinkedHashMap<>();
+    for (FieldMetadataBuilder fieldBuilder : builder.fields) {
+      FieldMetadata field = fieldBuilder.build();
+      fieldMap.put(field.name, field);
+    }
+    this.fields = Collections.unmodifiableMap(fieldMap);
   }
 
-  public void addField(FieldMetadata field) {
-    this.fields.put(field.name, field);
+  public static ClassMetadataBuilder builder(int id) {
+    return new ClassMetadataBuilder(id);
   }
 
   public FieldMetadata getField(String name) {
@@ -31,5 +43,39 @@ public class ClassMetadata extends AnnotatedMetadata {
 
   public Collection<FieldMetadata> getFields() {
     return this.fields.values();
+  }
+
+  public static class ClassMetadataBuilder extends AnnotatedMetadataBuilder {
+
+    private final List<FieldMetadataBuilder> fields;
+
+    private boolean simpleType;
+    private ClassMetadata instance;
+
+    public ClassMetadataBuilder(int id) {
+      super(id);
+      this.fields = new ArrayList<>();
+    }
+
+    public ClassMetadataBuilder simpleType(boolean simpleType) {
+      this.simpleType = simpleType;
+      return this;
+    }
+
+    public ClassMetadataBuilder field(FieldMetadataBuilder field) {
+      this.fields.add(field);
+      return this;
+    }
+
+    @Override
+    public ClassMetadata build() {
+      // TODO Make sure that no other builder methods may be invoked when instance is set
+      if (this.instance == null) {
+        // this.instance will be set in the constructor of ClassMetadata
+        new ClassMetadata(this);
+      }
+
+      return this.instance;
+    }
   }
 }

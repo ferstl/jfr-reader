@@ -7,8 +7,33 @@ public abstract class BasicMetadata {
   public final int id;
   public String name;
 
-  public BasicMetadata(int id) {
-    this.id = id;
+  BasicMetadata(BasicMetadataBuilder builder) {
+    this.id = builder.id;
+    this.name = builder.name;
   }
 
+  public static abstract class BasicMetadataBuilder {
+
+    private final int id;
+    private String name;
+
+    public BasicMetadataBuilder(int id) {
+      this.id = id;
+    }
+
+    public BasicMetadataBuilder name(String name) {
+      this.name = name;
+      return this;
+    }
+
+    public int getId() {
+      return this.id;
+    }
+
+    public String getName() {
+      return this.name;
+    }
+
+    public abstract BasicMetadata build();
+  }
 }
